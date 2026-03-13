@@ -22,6 +22,7 @@ export default function ExperimentScreen() {
     sessionId?: string;
   }>();
 
+
   const topic = params.topic;
   const moment = params.moment;
   const balance = params.balance;
@@ -45,7 +46,8 @@ export default function ExperimentScreen() {
       }
 
       const sessions = await sessionRepository.getAllSessions();
-      const found = sessions.find((item) => item.id === sessionId) || null;
+      const found =
+  sessions.find((session: StoredSession) => session.id === sessionId) || null;
       setPreviousSession(found);
       setIsLoadingPrevious(false);
     }

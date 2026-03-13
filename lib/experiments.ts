@@ -1,6 +1,8 @@
 import { getDeepDiveExperiments, getExperiments } from "../data/experiments";
 import { Experiment } from "../types/experiment";
 
+export type FollowupMode = "build" | "alternative";
+
 export function getExperimentList(params: {
   topic?: string;
   moment?: string;
@@ -19,61 +21,73 @@ export function getExperimentList(params: {
   return [];
 }
 
-export function getSelectedExperimentIndex(
-  list: Experiment[],
-  experimentTitle?: string
-): number {
-  if (!experimentTitle) return 0;
+export function getSelectedExperimentIndex(params: {
+  experiments: Experiment[];
+  requestedIndex?: string;
+  followupMode?: FollowupMode;
+  previousExperimentTitle?: string;
+}): number {
+  const {
+    experiments,
+    requestedIndex,
+    followupMode,
+    previousExperimentTitle,
+  } = params;
 
-  const index = list.findIndex(
-    (experiment) => experiment.title === experimentTitle
+  if (experiments.length === 0) return 0;
+
+  if (requestedIndex !== undefined) {
+    const parsedIndex = Number(requestedIndex);
+
+    if (
+      Number.isInteger(parsedIndex) &&
+      parsedIndex >= 0 &&
+      parsedIndex < experiments.length
+    ) {
+      return parsedIndex;
+    }
+  }
+
+  if (!followupMode || !previousExperimentTitle) {
+    return 0;
+  }
+
+  const previousIndex = experiments.findIndex(
+    (experiment) => experiment.title === previousExperimentTitle
   );
 
-  return index >= 0 ? index : 0;
-}
+  if (previousIndex < 0) {
+    return 0;
+  }
 
-export function getNextBuildExperiment(
-  list: Experiment[],
-  currentTitle?: string
-): Experiment | null {
-  if (list.length === 0) return null;
+  const previousExperiment = experiments[previousIndex];
 
-  const currentIndex = getSelectedExperimentIndex(list, currentTitle);
-  const current = list[currentIndex];
+  if (!previousExperiment) {
+    return 0;
+  }
 
-  if (!current) return list[0] ?? null;
+  if (followupMode === "build") {
+    const higherCapacityIndex = experiments.findIndex(
+      (experiment) =>
+        experiment.capacityLevel > previousExperiment.capacityLevel
+    );
 
-  const higherCapacity = list.find(
+    return higherCapacityIndex >= 0 ? higherCapacityIndex : previousIndex;
+  }
+
+  const sameLevelAlternativeIndex = experiments.findIndex(
     (experiment) =>
-      experiment.capacityLevel > current.capacityLevel &&
-      experiment.title !== current.title
+      experiment.capacityLevel === previousExperiment.capacityLevel &&
+      experiment.title !== previousExperiment.title
   );
 
-  return higherCapacity ?? current;
-}
+  if (sameLevelAlternativeIndex >= 0) {
+    return sameLevelAlternativeIndex;
+  }
 
-export function getAlternativeExperiment(
-  list: Experiment[],
-  currentTitle?: string
-): Experiment | null {
-  if (list.length === 0) return null;
-
-  const currentIndex = getSelectedExperimentIndex(list, currentTitle);
-  const current = list[currentIndex];
-
-  if (!current) return list[0] ?? null;
-
-  const sameLevelAlternative = list.find(
-    (experiment) =>
-      experiment.capacityLevel === current.capacityLevel &&
-      experiment.title !== current.title
+  const nextAlternativeIndex = experiments.findIndex(
+    (experiment) => experiment.title !== previousExperiment.title
   );
 
-  if (sameLevelAlternative) return sameLevelAlternative;
-
-  const nextAlternative = list.find(
-    (experiment) => experiment.title !== current.title
-  );
-
-  return nextAlternative ?? current;
+  return nextAlternativeIndex >= 0 ? nextAlternativeIndex : previousIndex;
 }
