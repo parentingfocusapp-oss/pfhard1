@@ -72,6 +72,7 @@ export default function MomentScreen() {
               params: {
                 topic: topic || "",
                 moment: chosenMoment,
+                momentSource: momentText.trim() ? "typed" : "preset",
                 duration: duration || "",
               },
             })

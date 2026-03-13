@@ -1,0 +1,25 @@
+import { Experiment } from "../../types/experiment";
+
+export type ReflectionAssistRequest = {
+  routeType: "short" | "deepdive";
+  duration: 2 | 5 | 10;
+
+  topic?: string;
+  moment?: string;
+
+  warmth?: string;
+  structure?: string;
+  balance?: string;
+
+  reflectionText?: string;
+
+  experimentOptions: Experiment[];
+};
+
+export type ReflectionAssistResponse = {
+  summary: string;
+  themes: string[];
+  recommendedCapacityLevel: 1 | 2 | 3;
+  suggestedExperimentIds: string[];
+  encouragement: string;
+};
