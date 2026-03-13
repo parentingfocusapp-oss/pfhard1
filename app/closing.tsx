@@ -1,12 +1,9 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
 import { Button, Text, View } from "react-native";
+import { createSession } from "../lib/session";
 import { sessionRepository } from "../lib/storage";
-import { DurationOption, StoredSession } from "../types/session";
-
-function getRouteType(topic?: string): StoredSession["routeType"] {
-  return topic ? "short" : "deepdive";
-}
+import { DurationOption } from "../types/session";
 
 function getDurationLabel(duration?: string) {
   if (duration === "2") return "2 minutes";
@@ -44,35 +41,30 @@ export default function ClosingScreen() {
     duration?: DurationOption;
   }>();
 
-  const session: StoredSession = {
-    id: Date.now().toString(),
-    createdAt: new Date().toISOString(),
+  const hasSaved = useRef(false);
 
-    routeType: getRouteType(topic),
-    duration,
-
+  const session = createSession({
     topic,
     moment,
-
+    balance,
     warmth,
     structure,
-    balance,
-
-    experimentTitle: experimentTitle || "Your experiment",
-    experimentAction: experimentAction || "No experiment selected.",
+    experimentTitle,
+    experimentAction,
     experimentWhy,
-
-    support: supports,
-    mantra,
     reminder,
-
-    followUpStatus: "pending",
-  };
+    supports,
+    mantra,
+    duration,
+  });
 
   useEffect(() => {
-  if (!experimentTitle || !experimentAction) return;
-  void sessionRepository.saveSession(session);
-}, []);
+    if (hasSaved.current) return;
+    if (!experimentTitle || !experimentAction) return;
+
+    hasSaved.current = true;
+    void sessionRepository.saveSession(session);
+  }, [experimentAction, experimentTitle, session]);
 
   const isDeepDive = !!balance;
   const durationLabel = getDurationLabel(duration);
