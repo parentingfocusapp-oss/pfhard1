@@ -36,9 +36,16 @@ export default function FollowupScreen() {
       }
 
       const sessions = await sessionRepository.getAllSessions();
+      
       const found = sessions.find((item) => item.id === sessionId) || null;
-      setSession(found);
-      setStep("tried");
+
+if (!found) {
+  router.replace("/");
+  return;
+}
+
+setSession(found);
+setStep("tried");
     }
 
     loadSession();

@@ -70,8 +70,9 @@ export default function ClosingScreen() {
   };
 
   useEffect(() => {
-    void sessionRepository.saveSession(session);
-  }, []);
+  if (!experimentTitle || !experimentAction) return;
+  void sessionRepository.saveSession(session);
+}, []);
 
   const isDeepDive = !!balance;
   const durationLabel = getDurationLabel(duration);
