@@ -23,3 +23,11 @@ export type ReflectionAssistResponse = {
   suggestedExperimentIds: string[];
   encouragement: string;
 };
+
+export type InterpretedMoment = {
+  label: string;
+  topic: "Morning routine" | "Screen time" | "Bedtime" | "Homework" | "Unknown";
+  matchedMoment: string;
+  summary: string;
+  themes: string[];
+};

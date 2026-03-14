@@ -10,6 +10,7 @@ import {
   TextInput
 } from "react-native";
 import { momentOptions } from "../data/options";
+import { interpretOwnMoment } from "../lib/ai/client";
 
 export default function MomentScreen() {
   const { topic, duration } = useLocalSearchParams<{
@@ -19,10 +20,68 @@ export default function MomentScreen() {
 
   const [selectedMoment, setSelectedMoment] = useState("");
   const [momentText, setMomentText] = useState("");
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
 
   const options = momentOptions[topic || ""] || [];
   const chosenMoment = selectedMoment || momentText.trim();
-  const canContinue = chosenMoment.length > 0;
+  const canContinue = chosenMoment.length > 0 && !isLoadingAi;
+
+  async function handleContinue() {
+    const isTypedMoment = !selectedMoment && momentText.trim().length > 0;
+
+    // If the user selected a preset moment, skip AI
+    if (!isTypedMoment) {
+      router.push({
+        pathname: "/experiment",
+        params: {
+          topic: topic || "",
+          moment: chosenMoment,
+          momentSource: "preset",
+          duration: duration || "10",
+        },
+      });
+      return;
+    }
+
+    try {
+      setIsLoadingAi(true);
+
+      const interpreted = await interpretOwnMoment({
+        topic,
+        momentText: momentText.trim(),
+        knownMoments: options,
+      });
+
+      router.push({
+        pathname: "/experiment",
+        params: {
+          topic: interpreted.topic !== "Unknown" ? interpreted.topic : topic || "",
+          moment: interpreted.label,
+          matchedMoment: interpreted.matchedMoment,
+          momentSummary: interpreted.summary,
+          momentThemes: JSON.stringify(interpreted.themes),
+          rawMoment: momentText.trim(),
+          momentSource: "typed",
+          duration: duration || "10",
+        },
+      });
+    } catch {
+      // Fallback if AI fails
+      router.push({
+        pathname: "/experiment",
+        params: {
+          topic: topic || "",
+          moment: momentText.trim(),
+          matchedMoment: "custom",
+          rawMoment: momentText.trim(),
+          momentSource: "typed",
+          duration: duration || "10",
+        },
+      });
+    } finally {
+      setIsLoadingAi(false);
+    }
+  }
 
   return (
     <KeyboardAvoidingView
@@ -87,18 +146,8 @@ export default function MomentScreen() {
         />
 
         <Button
-          title="Continue"
-          onPress={() =>
-            router.push({
-              pathname: "/experiment",
-              params: {
-                topic: topic || "",
-                moment: chosenMoment,
-                momentSource: selectedMoment ? "preset" : "typed",
-                duration: duration || "10",
-              },
-            })
-          }
+          title={isLoadingAi ? "Making sense of your moment..." : "Continue"}
+          onPress={handleContinue}
           disabled={!canContinue}
         />
       </ScrollView>

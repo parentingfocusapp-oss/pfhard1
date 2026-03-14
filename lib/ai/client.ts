@@ -44,3 +44,28 @@ export async function getReflectionAssist(
     return getFallbackResponse();
   }
 }
+
+import { safeJsonParse } from "./fallback";
+import { buildMomentInterpretationPrompt } from "./prompts";
+import { InterpretedMoment } from "./types";
+
+export async function interpretOwnMoment(input: {
+  topic?: string;
+  momentText: string;
+  knownMoments?: string[];
+}): Promise<InterpretedMoment> {
+
+  const prompt = buildMomentInterpretationPrompt(input);
+
+  const response = await callAi(prompt); // you should already have this
+
+  const parsed = safeJsonParse(response);
+
+  return {
+    label: parsed?.label ?? input.momentText,
+    topic: parsed?.topic ?? "Unknown",
+    matchedMoment: parsed?.matchedMoment ?? "custom",
+    summary: parsed?.summary ?? "",
+    themes: Array.isArray(parsed?.themes) ? parsed.themes.slice(0,3) : []
+  };
+}

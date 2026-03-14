@@ -9,3 +9,11 @@ export function getFallbackResponse(): ReflectionAssistResponse {
     encouragement: "",
   };
 }
+
+export function safeJsonParse(text: string): any {
+  try {
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+}
