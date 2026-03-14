@@ -3,7 +3,9 @@ import { Button, Text, View } from "react-native";
 import { DurationOption } from "../types/session";
 
 export default function BalanceScreen() {
-  const { warmth, structure, duration } = useLocalSearchParams<{
+  const { topic, moment, warmth, structure, duration } = useLocalSearchParams<{
+    topic?: string;
+    moment?: string;
     warmth?: string;
     structure?: string;
     duration?: DurationOption;
@@ -18,16 +20,21 @@ export default function BalanceScreen() {
         Looking at the bigger picture
       </Text>
 
-      <Text style={{ fontSize: 16, marginBottom: 16 }}>
-        {summary}
-      </Text>
+      <Text style={{ fontSize: 16, marginBottom: 16 }}>{summary}</Text>
 
       <Button
-        title="Continue to experiment"
+        title="Continue"
         onPress={() =>
           router.push({
-            pathname: "/experiment",
-            params: { balance, warmth, structure, duration: duration || "10" },
+            pathname: "/options",
+            params: {
+              topic: topic || "",
+              moment: moment || "",
+              balance,
+              warmth: warmth || "",
+              structure: structure || "",
+              duration: duration || "10",
+            },
           })
         }
       />
@@ -37,8 +44,12 @@ export default function BalanceScreen() {
 
 function getBalanceType(warmth: string, structure: string) {
   if (warmth === "low" && structure === "low") return "both";
-  if (warmth === "low" && (structure === "high" || structure === "medium")) return "warmth";
-  if ((warmth === "high" || warmth === "medium") && structure === "low") return "structure";
+  if (warmth === "low" && (structure === "high" || structure === "medium")) {
+    return "warmth";
+  }
+  if ((warmth === "high" || warmth === "medium") && structure === "low") {
+    return "structure";
+  }
   if (warmth === "mixed" || structure === "mixed") return "depends";
   return "both";
 }

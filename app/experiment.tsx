@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useState } from "react";
-import { Button, Text, View } from "react-native";
+import { useEffect, useMemo, useState } from "react";
+import { Button, Pressable, Text, View } from "react-native";
 import { getReflectionAssist } from "../lib/ai/client";
 import {
   FollowupMode,
@@ -10,6 +10,24 @@ import {
 import { sessionRepository } from "../lib/storage";
 import { StoredSession } from "../types/session";
 
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+type Choice =
+  | {
+      kind: "parent";
+      title: string;
+      action: string;
+      why: string;
+    }
+  | {
+      kind: "library";
+      title: string;
+      action: string;
+      why: string;
+    };
+
 export default function ExperimentScreen() {
   const params = useLocalSearchParams<{
     topic?: string;
@@ -18,12 +36,12 @@ export default function ExperimentScreen() {
     balance?: string;
     warmth?: string;
     structure?: string;
+    parentOptions?: string;
     index?: string;
     duration?: string;
     followupMode?: FollowupMode;
     sessionId?: string;
   }>();
-
 
   const topic = params.topic;
   const moment = params.moment;
@@ -35,48 +53,67 @@ export default function ExperimentScreen() {
   const duration = params.duration;
   const followupMode = params.followupMode;
   const sessionId = params.sessionId;
+  const parentOptions = params.parentOptions;
 
   const isDeepDive = !!balance;
+
+  const [previousSession, setPreviousSession] = useState<StoredSession | null>(
+    null
+  );
+  const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
+  const [aiSuggestionIndex, setAiSuggestionIndex] = useState<number | null>(
+    null
+  );
+  const [aiReflection, setAiReflection] = useState<string | null>(null);
+  const [selectedChoiceKey, setSelectedChoiceKey] = useState("");
+
   useEffect(() => {
-  async function maybeAssist() {
-    if (params.momentSource !== "typed") return;
-    if (!moment) return;
+    async function maybeAssist() {
+      if (momentSource !== "typed") return;
+      if (!moment) return;
 
-    const experiments = getExperimentList({ topic, moment, balance });
+      const experiments = getExperimentList({ topic, moment, balance });
 
-    const response = await getReflectionAssist({
-      routeType: isDeepDive ? "deepdive" : "short",
-      duration: Number(duration) as 2 | 5 | 10,
-      topic,
-      moment,
-      warmth,
-      structure,
-      balance,
-      reflectionText: moment,
-      experimentOptions: experiments,
-    });
+      await delay(800);
 
-    if (response.summary) {
-  setAiReflection(response.summary);
-}
-    if (response.suggestedExperimentIds.length > 0) {
-      const index = experiments.findIndex(
-        (e) => e.id === response.suggestedExperimentIds[0]
-      );
+      const response = await getReflectionAssist({
+        routeType: isDeepDive ? "deepdive" : "short",
+        duration: Number(duration) as 2 | 5 | 10,
+        topic,
+        moment,
+        warmth,
+        structure,
+        balance,
+        reflectionText: moment,
+        experimentOptions: experiments,
+      });
 
-      if (index >= 0) {
-        setAiSuggestionIndex(index);
+      if (response.summary) {
+        setAiReflection(response.summary);
+      }
+
+      if (response.suggestedExperimentIds.length > 0) {
+        const index = experiments.findIndex(
+          (e) => e.id === response.suggestedExperimentIds[0]
+        );
+
+        if (index >= 0) {
+          setAiSuggestionIndex(index);
+        }
       }
     }
-  }
 
-  maybeAssist();
-}, []);
-
-  const [previousSession, setPreviousSession] = useState<StoredSession | null>(null);
-  const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
-  const [aiSuggestionIndex, setAiSuggestionIndex] = useState<number | null>(null);
-  const [aiReflection, setAiReflection] = useState<string | null>(null);
+    maybeAssist();
+  }, [
+    momentSource,
+    moment,
+    topic,
+    balance,
+    isDeepDive,
+    duration,
+    warmth,
+    structure,
+  ]);
 
   useEffect(() => {
     async function loadPreviousSession() {
@@ -87,7 +124,9 @@ export default function ExperimentScreen() {
 
       const sessions = await sessionRepository.getAllSessions();
       const found =
-  sessions.find((session: StoredSession) => session.id === sessionId) || null;
+        sessions.find((session: StoredSession) => session.id === sessionId) ||
+        null;
+
       setPreviousSession(found);
       setIsLoadingPrevious(false);
     }
@@ -98,23 +137,67 @@ export default function ExperimentScreen() {
   const experiments = getExperimentList({ topic, moment, balance });
 
   const suggestionIndex =
-  aiSuggestionIndex ??
-  getSelectedExperimentIndex({  
-    experiments,
-    requestedIndex,
-    followupMode,
-    previousExperimentTitle: previousSession?.experimentTitle,
-  });
+    aiSuggestionIndex ??
+    getSelectedExperimentIndex({
+      experiments,
+      requestedIndex,
+      followupMode,
+      previousExperimentTitle: previousSession?.experimentTitle,
+    });
 
-  const experiment = experiments[suggestionIndex];
+  const libraryExperiment = experiments[suggestionIndex];
   const hasNextSuggestion = suggestionIndex < experiments.length - 1;
+
+  const parsedParentIdeas = useMemo(() => {
+    if (!parentOptions) return [];
+
+    try {
+      const parsed = JSON.parse(parentOptions);
+      return Array.isArray(parsed)
+        ? parsed.filter((item) => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }, [parentOptions]);
+
+  const choices: Choice[] = [
+    ...parsedParentIdeas.map((idea) => ({
+      kind: "parent" as const,
+      title: "Your idea",
+      action: idea,
+      why: "This is one of the ideas you generated yourself.",
+    })),
+    ...(libraryExperiment
+      ? [
+          {
+            kind: "library" as const,
+            title: libraryExperiment.title,
+            action: libraryExperiment.action,
+            why: libraryExperiment.why,
+          },
+        ]
+      : []),
+  ];
+
+  useEffect(() => {
+    if (choices.length === 0) {
+      setSelectedChoiceKey("");
+      return;
+    }
+
+    setSelectedChoiceKey(choices[0].action);
+  }, [parentOptions, suggestionIndex]);
+
+  const selectedChoice =
+    choices.find((choice) => choice.action === selectedChoiceKey) || choices[0];
 
   const heading =
     followupMode === "build"
       ? "Build on what worked"
       : followupMode === "alternative"
       ? "Try another idea for this area"
-      : "Your experiment";
+      : "Choose your experiment";
 
   if (isLoadingPrevious) {
     return (
@@ -130,18 +213,18 @@ export default function ExperimentScreen() {
         {heading}
       </Text>
 
-{aiReflection && (
-  <Text
-    style={{
-      fontSize: 16,
-      fontStyle: "italic",
-      marginBottom: 16,
-      color: "#444",
-    }}
-  >
-    {aiReflection}
-  </Text>
-)}
+      {aiReflection && (
+        <Text
+          style={{
+            fontSize: 16,
+            fontStyle: "italic",
+            marginBottom: 16,
+            color: "#444",
+          }}
+        >
+          {aiReflection}
+        </Text>
+      )}
 
       {isDeepDive ? (
         <>
@@ -156,26 +239,39 @@ export default function ExperimentScreen() {
         </>
       )}
 
-      {experiment ? (
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: "#999",
-            borderRadius: 8,
-            padding: 16,
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
-            {experiment.title}
-          </Text>
+      {choices.length > 0 ? (
+        <>
+          {choices.map((choice, index) => {
+            const isSelected = selectedChoiceKey === choice.action;
 
-          <Text style={{ marginBottom: 12 }}>{experiment.action}</Text>
+            return (
+              <Pressable
+                key={`${choice.kind}-${choice.action}-${index}`}
+                onPress={() => setSelectedChoiceKey(choice.action)}
+                style={{
+                  borderWidth: 1,
+                  borderColor: isSelected ? "#333" : "#999",
+                  borderRadius: 8,
+                  padding: 16,
+                  marginBottom: 16,
+                  backgroundColor: isSelected ? "#f2f2f2" : "#fff",
+                }}
+              >
+                <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
+                  {choice.kind === "library"
+                    ? "Suggested experiment"
+                    : `Parent option ${index + 1}`}
+                </Text>
 
-          <Text style={{ fontSize: 14, color: "#555" }}>
-            Why this might help: {experiment.why}
-          </Text>
-        </View>
+                <Text style={{ marginBottom: 12 }}>{choice.action}</Text>
+
+                <Text style={{ fontSize: 14, color: "#555" }}>
+                  Why this might help: {choice.why}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </>
       ) : (
         <Text
           style={{
@@ -186,14 +282,14 @@ export default function ExperimentScreen() {
             marginBottom: 24,
           }}
         >
-          No more suggestions available right now for this route.
+          No suggestions available right now for this route.
         </Text>
       )}
 
       <Button
         title="I'll try this"
         onPress={() => {
-          if (!experiment) return;
+          if (!selectedChoice) return;
 
           const nextScreen = duration === "2" ? "/reminder" : "/will";
 
@@ -205,9 +301,9 @@ export default function ExperimentScreen() {
               balance: balance || "",
               warmth: warmth || "",
               structure: structure || "",
-              experimentTitle: experiment.title,
-              experimentAction: experiment.action,
-              experimentWhy: experiment.why,
+              experimentTitle: selectedChoice.title,
+              experimentAction: selectedChoice.action,
+              experimentWhy: selectedChoice.why,
               index: String(suggestionIndex),
               duration: duration || "",
             },
@@ -229,6 +325,7 @@ export default function ExperimentScreen() {
                 balance: balance || "",
                 warmth: warmth || "",
                 structure: structure || "",
+                parentOptions: parentOptions || JSON.stringify([]),
                 index: String(suggestionIndex + 1),
                 duration: duration || "",
               },
@@ -241,9 +338,9 @@ export default function ExperimentScreen() {
 
       <Button title="Back" onPress={() => router.back()} />
 
-      {!hasNextSuggestion && (
+      {!hasNextSuggestion && libraryExperiment && (
         <Text style={{ marginTop: 16, fontSize: 14 }}>
-          You have reached the end of the current suggestions.
+          You have reached the end of the current library suggestions.
         </Text>
       )}
     </View>
