@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Button, Text, View } from "react-native";
+import { getReflectionAssist } from "../lib/ai/client";
 import {
   FollowupMode,
   getExperimentList,
@@ -13,6 +14,7 @@ export default function ExperimentScreen() {
   const params = useLocalSearchParams<{
     topic?: string;
     moment?: string;
+    momentSource?: "typed" | "preset";
     balance?: string;
     warmth?: string;
     structure?: string;
@@ -25,6 +27,7 @@ export default function ExperimentScreen() {
 
   const topic = params.topic;
   const moment = params.moment;
+  const momentSource = params.momentSource;
   const balance = params.balance;
   const warmth = params.warmth;
   const structure = params.structure;
@@ -34,9 +37,46 @@ export default function ExperimentScreen() {
   const sessionId = params.sessionId;
 
   const isDeepDive = !!balance;
+  useEffect(() => {
+  async function maybeAssist() {
+    if (params.momentSource !== "typed") return;
+    if (!moment) return;
+
+    const experiments = getExperimentList({ topic, moment, balance });
+
+    const response = await getReflectionAssist({
+      routeType: isDeepDive ? "deepdive" : "short",
+      duration: Number(duration) as 2 | 5 | 10,
+      topic,
+      moment,
+      warmth,
+      structure,
+      balance,
+      reflectionText: moment,
+      experimentOptions: experiments,
+    });
+
+    if (response.summary) {
+  setAiReflection(response.summary);
+}
+    if (response.suggestedExperimentIds.length > 0) {
+      const index = experiments.findIndex(
+        (e) => e.id === response.suggestedExperimentIds[0]
+      );
+
+      if (index >= 0) {
+        setAiSuggestionIndex(index);
+      }
+    }
+  }
+
+  maybeAssist();
+}, []);
 
   const [previousSession, setPreviousSession] = useState<StoredSession | null>(null);
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
+  const [aiSuggestionIndex, setAiSuggestionIndex] = useState<number | null>(null);
+  const [aiReflection, setAiReflection] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadPreviousSession() {
@@ -57,7 +97,9 @@ export default function ExperimentScreen() {
 
   const experiments = getExperimentList({ topic, moment, balance });
 
-  const suggestionIndex = getSelectedExperimentIndex({
+  const suggestionIndex =
+  aiSuggestionIndex ??
+  getSelectedExperimentIndex({  
     experiments,
     requestedIndex,
     followupMode,
@@ -87,6 +129,19 @@ export default function ExperimentScreen() {
       <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 16 }}>
         {heading}
       </Text>
+
+{aiReflection && (
+  <Text
+    style={{
+      fontSize: 16,
+      fontStyle: "italic",
+      marginBottom: 16,
+      color: "#444",
+    }}
+  >
+    {aiReflection}
+  </Text>
+)}
 
       {isDeepDive ? (
         <>
