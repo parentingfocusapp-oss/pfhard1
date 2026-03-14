@@ -1,75 +1,204 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, Text, View } from "react-native";
+import { useState } from "react";
+import {
+  Button,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
+import { interpretParentOptions } from "../lib/ai/client";
 import { DurationOption } from "../types/session";
 
-export default function BalanceScreen() {
-  const { topic, moment, warmth, structure, duration } = useLocalSearchParams<{
-    topic?: string;
-    moment?: string;
-    warmth?: string;
-    structure?: string;
-    duration?: DurationOption;
-  }>();
+const MAX_IDEAS = 3;
 
-  const summary = getBalanceSummary(warmth || "", structure || "");
-  const balance = getBalanceType(warmth || "", structure || "");
+export default function OptionsScreen() {
+  const { topic, moment, balance, warmth, structure, duration } =
+    useLocalSearchParams<{
+      topic?: string;
+      moment?: string;
+      balance?: string;
+      warmth?: string;
+      structure?: string;
+      duration?: DurationOption;
+    }>();
+
+  const [currentIdea, setCurrentIdea] = useState("");
+  const [ideas, setIdeas] = useState<string[]>([]);
+  const [isLoadingAi, setIsLoadingAi] = useState(false);
+
+  function addIdea() {
+    const trimmed = currentIdea.trim();
+    if (!trimmed) return;
+    if (ideas.length >= MAX_IDEAS) return;
+
+    setIdeas((prev) => [...prev, trimmed]);
+    setCurrentIdea("");
+  }
+
+  function removeIdea(index: number) {
+    setIdeas((prev) => prev.filter((_, i) => i !== index));
+  }
+
+  async function continueWithIdeas() {
+    const trimmed = currentIdea.trim();
+
+    let finalIdeas = ideas;
+    if (trimmed && ideas.length < MAX_IDEAS) {
+      finalIdeas = [...ideas, trimmed];
+    }
+
+    if (finalIdeas.length === 0) return;
+
+    try {
+      setIsLoadingAi(true);
+
+      const interpreted = await interpretParentOptions({
+        topic,
+        moment,
+        balance,
+        warmth,
+        structure,
+        parentOptions: finalIdeas.slice(0, MAX_IDEAS),
+      });
+
+      router.push({
+        pathname: "/choose-parent-option",
+        params: {
+          topic: topic || "",
+          moment: moment || "",
+          balance: balance || "",
+          warmth: warmth || "",
+          structure: structure || "",
+          duration: duration || "10",
+
+          parentOptions: JSON.stringify(interpreted.cleanedOptions),
+          suggestedOptions: JSON.stringify(interpreted.suggestedCarryForward),
+        },
+      });
+    } catch {
+      router.push({
+        pathname: "/choose-parent-option",
+        params: {
+          topic: topic || "",
+          moment: moment || "",
+          balance: balance || "",
+          warmth: warmth || "",
+          structure: structure || "",
+          duration: duration || "10",
+          parentOptions: JSON.stringify(finalIdeas.slice(0, MAX_IDEAS)),
+        },
+      });
+    } finally {
+      setIsLoadingAi(false);
+    }
+  }
+
+  function skipForNow() {
+    router.push({
+      pathname: "/experiment",
+      params: {
+        topic: topic || "",
+        moment: moment || "",
+        balance: balance || "",
+        warmth: warmth || "",
+        structure: structure || "",
+        duration: duration || "10",
+        parentOptions: JSON.stringify([]),
+      },
+    });
+  }
+
+  const canAddMore = ideas.length < MAX_IDEAS;
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 20 }}>
-        Looking at the bigger picture
-      </Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
+          Your ideas
+        </Text>
 
-      <Text style={{ fontSize: 16, marginBottom: 16 }}>{summary}</Text>
+        <Text style={{ fontSize: 16, marginBottom: 16 }}>
+          What have you already thought of trying? Add up to three ideas, even if
+          they feel rough or unfinished.
+        </Text>
 
-      <Button
-        title="Continue"
-        onPress={() =>
-          router.push({
-            pathname: "/options",
-            params: {
-              topic: topic || "",
-              moment: moment || "",
-              balance,
-              warmth: warmth || "",
-              structure: structure || "",
-              duration: duration || "10",
-            },
-          })
-        }
-      />
-    </View>
+        {ideas.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12 }}>
+              Your ideas so far
+            </Text>
+
+            {ideas.map((idea, index) => (
+              <View
+                key={`${idea}-${index}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#ddd",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 10,
+                }}
+              >
+                <Text style={{ marginBottom: 8 }}>{idea}</Text>
+
+                <Pressable onPress={() => removeIdea(index)}>
+                  <Text style={{ color: "red" }}>Remove</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {canAddMore ? (
+          <>
+            <TextInput
+              value={currentIdea}
+              onChangeText={setCurrentIdea}
+              placeholder="Type one idea here"
+              multiline
+              style={{
+                borderWidth: 1,
+                borderColor: "#ccc",
+                borderRadius: 8,
+                padding: 12,
+                minHeight: 90,
+                textAlignVertical: "top",
+                marginBottom: 12,
+              }}
+            />
+
+            <Button title="Add idea" onPress={addIdea} />
+          </>
+        ) : (
+          <Text style={{ marginBottom: 16, color: "#555" }}>
+            You’ve added three ideas. You can continue, or remove one if you want
+            to change it.
+          </Text>
+        )}
+
+        <View style={{ height: 24 }} />
+
+        <Button
+          title={
+            isLoadingAi ? "Looking at your ideas..." : "Continue with my ideas"
+          }
+          onPress={continueWithIdeas}
+        />
+
+        <View style={{ height: 12 }} />
+
+        <Button title="Skip for now" onPress={skipForNow} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
-}
-
-function getBalanceType(warmth: string, structure: string) {
-  if (warmth === "low" && structure === "low") return "both";
-  if (warmth === "low" && (structure === "high" || structure === "medium")) {
-    return "warmth";
-  }
-  if ((warmth === "high" || warmth === "medium") && structure === "low") {
-    return "structure";
-  }
-  if (warmth === "mixed" || structure === "mixed") return "depends";
-  return "both";
-}
-
-function getBalanceSummary(warmth: string, structure: string) {
-  if (warmth === "low" && structure === "low") {
-    return "Right now, both connection and structure may need support. A small step that combines warmth and clarity may help most.";
-  }
-
-  if (warmth === "low" && (structure === "high" || structure === "medium")) {
-    return "There may already be some structure here, but the relationship side may need more attention first. A small increase in warmth could make guidance easier to hear.";
-  }
-
-  if ((warmth === "high" || warmth === "medium") && structure === "low") {
-    return "There seems to be some connection here already, but expectations may need to become clearer and more consistent. A small step in structure may help.";
-  }
-
-  if (warmth === "mixed" || structure === "mixed") {
-    return "This looks more situation-dependent. It may help to pause and ask in the moment whether your child needs more connection, more clarity, or both.";
-  }
-
-  return "There are strengths here already. The next step may be a small adjustment that brings warmth and structure together more consistently.";
 }

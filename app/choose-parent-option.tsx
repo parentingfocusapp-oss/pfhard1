@@ -11,6 +11,7 @@ export default function ChooseParentOptionScreen() {
     warmth?: string;
     structure?: string;
     parentOptions?: string;
+    suggestedOptions?: string;
   }>();
 
   const {
@@ -21,6 +22,7 @@ export default function ChooseParentOptionScreen() {
     warmth,
     structure,
     parentOptions,
+    suggestedOptions,
   } = params;
 
   const options = useMemo(() => {
@@ -35,6 +37,19 @@ export default function ChooseParentOptionScreen() {
       return [];
     }
   }, [parentOptions]);
+
+  const suggested = useMemo(() => {
+    if (!suggestedOptions) return [];
+
+    try {
+      const parsed = JSON.parse(suggestedOptions);
+      return Array.isArray(parsed)
+        ? parsed.filter((item) => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }, [suggestedOptions]);
 
   function continueWithIdeas() {
     router.push({
@@ -73,30 +88,44 @@ export default function ChooseParentOptionScreen() {
       </Text>
 
       <Text style={{ fontSize: 16, marginBottom: 16 }}>
-        Here are the ideas you came up with. You can carry these forward into
-        the experiment step, or skip them and look only at the library
-        suggestion.
+        Here are the ideas you came up with. The highlighted ones may be a
+        helpful place to start.
       </Text>
 
       <View style={{ gap: 12 }}>
-        {options.map((option, index) => (
-          <View
-            key={`${option}-${index}`}
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 10,
-              padding: 14,
-              marginBottom: 12,
-            }}
-          >
-            <Text style={{ fontSize: 16 }}>{option}</Text>
-          </View>
-        ))}
+        {options.map((option, index) => {
+          const isSuggested = suggested.includes(option);
+
+          return (
+            <View
+              key={`${option}-${index}`}
+              style={{
+                borderWidth: 1,
+                borderColor: isSuggested ? "#333" : "#ccc",
+                borderRadius: 10,
+                padding: 14,
+                marginBottom: 12,
+                backgroundColor: isSuggested ? "#f2f2f2" : "#fff",
+              }}
+            >
+              <Text style={{ fontSize: 16 }}>{option}</Text>
+
+              {isSuggested && (
+                <Text style={{ fontSize: 12, marginTop: 6, color: "#555" }}>
+                  Suggested starting point
+                </Text>
+              )}
+            </View>
+          );
+        })}
       </View>
 
       <View style={{ marginTop: "auto", gap: 12 }}>
-        <Button title="Continue to choose experiment" onPress={continueWithIdeas} />
+        <Button
+          title="Continue to choose experiment"
+          onPress={continueWithIdeas}
+        />
+
         <Button
           title="Skip my ideas and show only the suggestion"
           onPress={skipToLibraryOnly}
