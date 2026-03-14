@@ -1,6 +1,15 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Button, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Button,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput,
+  View,
+} from "react-native";
 import { DurationOption } from "../types/session";
 
 const MAX_IDEAS = 3;
@@ -32,7 +41,7 @@ export default function OptionsScreen() {
     setIdeas((prev) => prev.filter((_, i) => i !== index));
   }
 
-  function continueNext() {
+  function continueWithIdeas() {
     const trimmed = currentIdea.trim();
 
     let finalIdeas = ideas;
@@ -56,80 +65,103 @@ export default function OptionsScreen() {
     });
   }
 
+  function skipForNow() {
+    router.push({
+      pathname: "/experiment",
+      params: {
+        topic: topic || "",
+        moment: moment || "",
+        balance: balance || "",
+        warmth: warmth || "",
+        structure: structure || "",
+        duration: duration || "10",
+        parentOptions: JSON.stringify([]),
+      },
+    });
+  }
+
   const canAddMore = ideas.length < MAX_IDEAS;
-  const canContinue = ideas.length > 0 || currentIdea.trim().length > 0;
 
   return (
-    <View style={{ flex: 1, padding: 24 }}>
-      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
-        Your ideas
-      </Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
+          Your ideas
+        </Text>
 
-      <Text style={{ fontSize: 16, marginBottom: 16 }}>
-        What have you already thought of trying? Add up to three ideas, even if
-        they feel rough or unfinished.
-      </Text>
+        <Text style={{ fontSize: 16, marginBottom: 16 }}>
+          What have you already thought of trying? Add up to three ideas, even if
+          they feel rough or unfinished.
+        </Text>
 
-      {ideas.length > 0 && (
-        <View style={{ marginBottom: 20 }}>
-          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12 }}>
-            Your ideas so far
-          </Text>
+        {ideas.length > 0 && (
+          <View style={{ marginBottom: 20 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12 }}>
+              Your ideas so far
+            </Text>
 
-          {ideas.map((idea, index) => (
-            <View
-              key={`${idea}-${index}`}
+            {ideas.map((idea, index) => (
+              <View
+                key={`${idea}-${index}`}
+                style={{
+                  borderWidth: 1,
+                  borderColor: "#ddd",
+                  borderRadius: 8,
+                  padding: 12,
+                  marginBottom: 10,
+                }}
+              >
+                <Text style={{ marginBottom: 8 }}>{idea}</Text>
+
+                <Pressable onPress={() => removeIdea(index)}>
+                  <Text style={{ color: "red" }}>Remove</Text>
+                </Pressable>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {canAddMore ? (
+          <>
+            <TextInput
+              value={currentIdea}
+              onChangeText={setCurrentIdea}
+              placeholder="Type one idea here"
+              multiline
               style={{
                 borderWidth: 1,
-                borderColor: "#ddd",
+                borderColor: "#ccc",
                 borderRadius: 8,
                 padding: 12,
-                marginBottom: 10,
+                minHeight: 90,
+                textAlignVertical: "top",
+                marginBottom: 12,
               }}
-            >
-              <Text style={{ marginBottom: 8 }}>{idea}</Text>
+            />
 
-              <Pressable onPress={() => removeIdea(index)}>
-                <Text style={{ color: "red" }}>Remove</Text>
-              </Pressable>
-            </View>
-          ))}
-        </View>
-      )}
+            <Button title="Add idea" onPress={addIdea} />
+          </>
+        ) : (
+          <Text style={{ marginBottom: 16, color: "#555" }}>
+            You’ve added three ideas. You can continue, or remove one if you want
+            to change it.
+          </Text>
+        )}
 
-      {canAddMore ? (
-        <>
-          <TextInput
-            value={currentIdea}
-            onChangeText={setCurrentIdea}
-            placeholder="Type one idea here"
-            multiline
-            style={{
-              borderWidth: 1,
-              borderColor: "#ccc",
-              borderRadius: 8,
-              padding: 12,
-              minHeight: 90,
-              textAlignVertical: "top",
-              marginBottom: 12,
-            }}
-          />
+        <View style={{ height: 24 }} />
 
-          <Button title="Add idea" onPress={addIdea} />
-        </>
-      ) : (
-        <Text style={{ marginBottom: 12, color: "#555" }}>
-          You’ve added three ideas. You can continue or remove one and change it.
-        </Text>
-      )}
+        <Button title="Continue with my ideas" onPress={continueWithIdeas} />
 
-      <View style={{ marginTop: "auto" }}>
-        <Button
-          title="Continue"
-          onPress={continueNext}
-          disabled={!canContinue}
-        />
-      </View>
-    </View>
+        <View style={{ height: 12 }} />
+
+        <Button title="Skip for now" onPress={skipForNow} />
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

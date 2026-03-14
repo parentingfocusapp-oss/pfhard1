@@ -1,6 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
-import { Button, Pressable, Text, TextInput, View } from "react-native";
+import {
+  Button,
+  KeyboardAvoidingView,
+  Platform,
+  Pressable,
+  ScrollView,
+  Text,
+  TextInput
+} from "react-native";
 import { momentOptions } from "../data/options";
 
 export default function MomentScreen() {
@@ -8,6 +16,7 @@ export default function MomentScreen() {
     topic?: string;
     duration?: string;
   }>();
+
   const [selectedMoment, setSelectedMoment] = useState("");
   const [momentText, setMomentText] = useState("");
 
@@ -16,54 +25,67 @@ export default function MomentScreen() {
   const canContinue = chosenMoment.length > 0;
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 12 }}>
-        What is the one moment that tends to go wrong?
-      </Text>
+    <KeyboardAvoidingView
+      style={{ flex: 1 }}
+      behavior={Platform.OS === "ios" ? "padding" : undefined}
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
+          What moment is hardest right now?
+        </Text>
 
-      <Text style={{ marginBottom: 16 }}>Topic: {topic}</Text>
+        {options.map((option) => {
+          const isSelected = selectedMoment === option;
 
-      {options.map((option) => (
-        <Pressable
-          key={option}
-          onPress={() => {
-            setSelectedMoment(option);
-            setMomentText("");
+          return (
+            <Pressable
+              key={option}
+              onPress={() => {
+                setSelectedMoment(option);
+                setMomentText("");
+              }}
+              style={{
+                borderWidth: 1,
+                borderColor: isSelected ? "#333" : "#ccc",
+                borderRadius: 8,
+                padding: 14,
+                marginBottom: 12,
+                backgroundColor: isSelected ? "#f2f2f2" : "#fff",
+              }}
+            >
+              <Text>{option}</Text>
+            </Pressable>
+          );
+        })}
+
+        <Text style={{ fontSize: 16, marginTop: 8, marginBottom: 8 }}>
+          Or type your own
+        </Text>
+
+        <TextInput
+          value={momentText}
+          onChangeText={(text) => {
+            setMomentText(text);
+            if (text.trim().length > 0) {
+              setSelectedMoment("");
+            }
           }}
+          placeholder="Describe the moment"
+          multiline
           style={{
-            borderWidth: 2,
-            borderColor: selectedMoment === option ? "#000" : "#999",
-            backgroundColor: selectedMoment === option ? "#eaeaea" : "transparent",
-            padding: 12,
+            borderWidth: 1,
+            borderColor: "#ccc",
             borderRadius: 8,
-            marginBottom: 10,
+            padding: 12,
+            minHeight: 100,
+            textAlignVertical: "top",
+            marginBottom: 24,
           }}
-        >
-          <Text>{option}</Text>
-        </Pressable>
-      ))}
+        />
 
-      <Text style={{ marginTop: 10, marginBottom: 8 }}>
-        Or type your own:
-      </Text>
-
-      <TextInput
-        style={{
-          borderWidth: 1,
-          borderColor: "#999",
-          padding: 12,
-          borderRadius: 8,
-          marginBottom: 20,
-        }}
-        placeholder="Type one or two lines..."
-        value={momentText}
-        onChangeText={(text) => {
-          setSelectedMoment("");
-          setMomentText(text);
-        }}
-      />
-
-      {canContinue ? (
         <Button
           title="Continue"
           onPress={() =>
@@ -72,21 +94,14 @@ export default function MomentScreen() {
               params: {
                 topic: topic || "",
                 moment: chosenMoment,
-                momentSource: momentText.trim() ? "typed" : "preset",
-                duration: duration || "",
+                momentSource: selectedMoment ? "preset" : "typed",
+                duration: duration || "10",
               },
             })
           }
+          disabled={!canContinue}
         />
-      ) : (
-        <Text style={{ marginBottom: 12, color: "red" }}>
-          Please select an option or type your own.
-        </Text>
-      )}
-
-      <View style={{ marginTop: 20 }}>
-        <Button title="Back" onPress={() => router.back()} />
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }
