@@ -263,7 +263,16 @@ export default function ExperimentScreen() {
                     : `Parent option ${index + 1}`}
                 </Text>
 
-                <Text style={{ marginBottom: 12 }}>{choice.action}</Text>
+                <Text
+                  style={{
+                    fontSize: 20,
+                    fontWeight: "700",
+                    lineHeight: 28,
+                    marginBottom: 12,
+                  }}
+                >
+                  {choice.action}
+                </Text>
 
                 <Text style={{ fontSize: 14, color: "#555" }}>
                   Why this might help: {choice.why}
