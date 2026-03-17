@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Button,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -145,11 +144,31 @@ export default function MomentScreen() {
           }}
         />
 
-        <Button
-          title={isLoadingAi ? "Making sense of your moment..." : "Continue"}
-          onPress={handleContinue}
+        <Pressable
+          onPress={() => {
+            if (canContinue) {
+              void handleContinue();
+            }
+          }}
           disabled={!canContinue}
-        />
+          style={{
+            borderRadius: 8,
+            paddingVertical: 14,
+            paddingHorizontal: 16,
+            alignItems: "center",
+            backgroundColor: canContinue ? "#2563eb" : "#cbd5e1",
+          }}
+        >
+          <Text
+            style={{
+              color: canContinue ? "#fff" : "#475569",
+              fontSize: 16,
+              fontWeight: "600",
+            }}
+          >
+            {isLoadingAi ? "Making sense of your moment..." : "Continue"}
+          </Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
