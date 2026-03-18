@@ -16,6 +16,7 @@ export type StoredSession = {
   moment?: string;
 
   // Deep dive route
+  reality?: string;
   warmth?: string;
   structure?: string;
   balance?: string;

@@ -10,19 +10,21 @@ import {
   TextInput,
   View,
 } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 import { interpretParentOptions } from "../lib/ai/client";
 import { DurationOption } from "../types/session";
 
 const MAX_IDEAS = 3;
 
 export default function OptionsScreen() {
-  const { topic, moment, balance, warmth, structure, duration } =
+  const { topic, moment, balance, warmth, structure, reality, duration } =
     useLocalSearchParams<{
       topic?: string;
       moment?: string;
       balance?: string;
       warmth?: string;
       structure?: string;
+      reality?: string;
       duration?: DurationOption;
     }>();
 
@@ -73,6 +75,7 @@ export default function OptionsScreen() {
           balance: balance || "",
           warmth: warmth || "",
           structure: structure || "",
+          reality: reality || "",
           duration: duration || "10",
 
           parentOptions: JSON.stringify(interpreted.cleanedOptions),
@@ -88,6 +91,7 @@ export default function OptionsScreen() {
           balance: balance || "",
           warmth: warmth || "",
           structure: structure || "",
+          reality: reality || "",
           duration: duration || "10",
           parentOptions: JSON.stringify(finalIdeas.slice(0, MAX_IDEAS)),
         },
@@ -106,6 +110,7 @@ export default function OptionsScreen() {
         balance: balance || "",
         warmth: warmth || "",
         structure: structure || "",
+        reality: reality || "",
         duration: duration || "10",
         parentOptions: JSON.stringify([]),
       },
@@ -116,25 +121,25 @@ export default function OptionsScreen() {
 
   return (
     <KeyboardAvoidingView
-      style={{ flex: 1 }}
+      style={{ flex: 1, backgroundColor: WarmTheme.bg }}
       behavior={Platform.OS === "ios" ? "padding" : undefined}
     >
       <ScrollView
         contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
+        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16, color: WarmTheme.text }}>
           Your ideas
         </Text>
 
-        <Text style={{ fontSize: 16, marginBottom: 16 }}>
+        <Text style={{ fontSize: 16, marginBottom: 16, color: WarmTheme.mutedText }}>
           What have you already thought of trying? Add up to three ideas, even if
           they feel rough or unfinished.
         </Text>
 
         {ideas.length > 0 && (
           <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12 }}>
+            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
               Your ideas so far
             </Text>
 
@@ -143,16 +148,16 @@ export default function OptionsScreen() {
                 key={`${idea}-${index}`}
                 style={{
                   borderWidth: 1,
-                  borderColor: "#ddd",
+                  borderColor: WarmTheme.border,
                   borderRadius: 8,
                   padding: 12,
                   marginBottom: 10,
                 }}
               >
-                <Text style={{ marginBottom: 8 }}>{idea}</Text>
+                <Text style={{ marginBottom: 8, color: WarmTheme.text }}>{idea}</Text>
 
                 <Pressable onPress={() => removeIdea(index)}>
-                  <Text style={{ color: "red" }}>Remove</Text>
+                  <Text style={{ color: WarmTheme.danger }}>Remove</Text>
                 </Pressable>
               </View>
             ))}
@@ -168,13 +173,16 @@ export default function OptionsScreen() {
               multiline
               style={{
                 borderWidth: 1,
-                borderColor: "#ccc",
+                borderColor: WarmTheme.border,
                 borderRadius: 8,
                 padding: 12,
                 minHeight: 90,
                 textAlignVertical: "top",
                 marginBottom: 12,
+                backgroundColor: WarmTheme.surface,
+                color: WarmTheme.text,
               }}
+              placeholderTextColor={WarmTheme.mutedText}
             />
 
             <Button title="Add idea" onPress={addIdea} />

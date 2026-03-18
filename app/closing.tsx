@@ -1,16 +1,10 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useRef } from "react";
-import { Button, Text, View } from "react-native";
+import { useEffect, useMemo, useRef } from "react";
+import { BackHandler, Button, Platform, Text, View } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 import { createSession } from "../lib/session";
 import { sessionRepository } from "../lib/storage";
 import { DurationOption } from "../types/session";
-
-function getDurationLabel(duration?: string) {
-  if (duration === "2") return "2 minutes";
-  if (duration === "5") return "5 minutes";
-  if (duration === "10") return "10 minutes";
-  return undefined;
-}
 
 export default function ClosingScreen() {
   const {
@@ -19,6 +13,7 @@ export default function ClosingScreen() {
     balance,
     warmth,
     structure,
+    reality,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -32,6 +27,7 @@ export default function ClosingScreen() {
     balance?: string;
     warmth?: string;
     structure?: string;
+    reality?: string;
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
@@ -49,6 +45,7 @@ export default function ClosingScreen() {
     balance,
     warmth,
     structure,
+    reality,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -66,73 +63,81 @@ export default function ClosingScreen() {
     void sessionRepository.saveSession(session);
   }, [experimentAction, experimentTitle, session]);
 
-  const isDeepDive = !!balance;
-  const durationLabel = getDurationLabel(duration);
+  const outline = useMemo(() => {
+    if (moment) return moment;
+    if (reality) return reality;
+    if (topic) return topic;
+    if (balance) return balance;
+    return "the problem you chose to focus on";
+  }, [balance, moment, reality, topic]);
+
+  function finishForToday() {
+    if (Platform.OS === "android") {
+      BackHandler.exitApp();
+      return;
+    }
+
+    router.replace("/");
+  }
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 16 }}>
-        You're set
+    <View style={{ flex: 1, justifyContent: "center", padding: 24, backgroundColor: WarmTheme.bg }}>
+      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 16, color: WarmTheme.text }}>
+        You are set
       </Text>
 
-      <Text style={{ marginBottom: 24 }}>
-        You chose one small experiment to try. That is enough for today.
+      <Text style={{ marginBottom: 24, color: WarmTheme.mutedText }}>
+        Well done for taking time to work on your family.
       </Text>
 
-      <View style={{ marginBottom: 24 }}>
-        {topic ? <Text style={{ marginBottom: 8 }}>Topic: {topic}</Text> : null}
-        {moment ? <Text style={{ marginBottom: 8 }}>Moment: {moment}</Text> : null}
-
-        {isDeepDive ? (
-          <>
-            <Text style={{ marginBottom: 8 }}>Warmth: {warmth}</Text>
-            <Text style={{ marginBottom: 8 }}>Structure: {structure}</Text>
-            <Text style={{ marginBottom: 8 }}>Focus: {balance}</Text>
-          </>
-        ) : null}
-      </View>
+      <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
+        You chose one small experiment for {outline}. That is enough for today.
+      </Text>
 
       <View
         style={{
           borderWidth: 1,
-          borderColor: "#999",
+          borderColor: WarmTheme.border,
           borderRadius: 8,
           padding: 16,
           marginBottom: 24,
+          backgroundColor: WarmTheme.surface,
         }}
       >
-        <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
+        <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8, color: WarmTheme.text }}>
           {experimentTitle || "Your experiment"}
         </Text>
 
-        <Text style={{ marginBottom: 12 }}>
+        <Text style={{ marginBottom: 12, color: WarmTheme.text }}>
           {experimentAction || "No experiment selected."}
         </Text>
 
         {experimentWhy ? (
-          <Text style={{ fontSize: 14, color: "#555" }}>
+          <Text style={{ fontSize: 14, color: WarmTheme.mutedText }}>
             Why this might help: {experimentWhy}
           </Text>
         ) : null}
       </View>
 
-      {durationLabel ? (
-        <Text style={{ marginBottom: 8 }}>Session length: {durationLabel}</Text>
-      ) : null}
-
       {supports ? (
-        <Text style={{ marginBottom: 8 }}>Support plan: {supports}</Text>
+        <Text style={{ marginBottom: 8, color: WarmTheme.mutedText }}>
+          What will help: {supports}
+        </Text>
       ) : null}
 
       {mantra ? (
-        <Text style={{ marginBottom: 8 }}>Reminder phrase: {mantra}</Text>
+        <Text style={{ marginBottom: 8, color: WarmTheme.mutedText }}>
+          Words to come back to: {mantra}
+        </Text>
       ) : null}
 
-      <Text style={{ marginBottom: 24 }}>
-        Reminder: {reminder || "None chosen"}
-      </Text>
+      {reminder ? (
+        <Text style={{ marginBottom: 24, color: WarmTheme.mutedText }}>
+          Reflection reminder: {reminder}
+        </Text>
+      ) : null}
 
-      <Button title="Done for today" onPress={() => router.replace("/")} />
+      <Button title="Done for today" onPress={finishForToday} />
     </View>
   );
 }

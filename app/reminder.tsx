@@ -8,6 +8,7 @@ import {
   Text,
   View,
 } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 import {
   ReminderOption,
   notificationsAreAvailable,
@@ -32,6 +33,7 @@ type DateTimePickerProps = {
 
 function getDateTimePickerComponent(): React.ComponentType<DateTimePickerProps> | null {
   try {
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const module = require("@react-native-community/datetimepicker");
     return module.default as React.ComponentType<DateTimePickerProps>;
   } catch {
@@ -55,6 +57,22 @@ function createInitialCustomDate() {
   return date;
 }
 
+function mergeCustomDate(current: Date, nextValue: Date, mode: PickerMode) {
+  const updated = new Date(current);
+
+  if (mode === "date") {
+    updated.setFullYear(
+      nextValue.getFullYear(),
+      nextValue.getMonth(),
+      nextValue.getDate()
+    );
+  } else {
+    updated.setHours(nextValue.getHours(), nextValue.getMinutes(), 0, 0);
+  }
+
+  return updated;
+}
+
 export default function ReminderScreen() {
   const {
     topic,
@@ -62,6 +80,7 @@ export default function ReminderScreen() {
     balance,
     warmth,
     structure,
+    reality,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -75,6 +94,7 @@ export default function ReminderScreen() {
     balance?: string;
     warmth?: string;
     structure?: string;
+    reality?: string;
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
@@ -101,6 +121,7 @@ export default function ReminderScreen() {
         balance: balance || "",
         warmth: warmth || "",
         structure: structure || "",
+        reality: reality || "",
         experimentTitle: experimentTitle || "",
         experimentAction: experimentAction || "",
         experimentWhy: experimentWhy || "",
@@ -163,21 +184,7 @@ export default function ReminderScreen() {
   }
 
   function updateCustomDate(nextValue: Date, mode: PickerMode) {
-    setCustomDate((current) => {
-      const updated = new Date(current);
-
-      if (mode === "date") {
-        updated.setFullYear(
-          nextValue.getFullYear(),
-          nextValue.getMonth(),
-          nextValue.getDate()
-        );
-      } else {
-        updated.setHours(nextValue.getHours(), nextValue.getMinutes(), 0, 0);
-      }
-
-      return updated;
-    });
+    setCustomDate((current) => mergeCustomDate(current, nextValue, mode));
   }
 
   function handleAndroidPickerChange(
@@ -192,7 +199,13 @@ export default function ReminderScreen() {
 
     if (!selectedValue) return;
 
-    updateCustomDate(selectedValue, androidPickerMode);
+    const nextCustomDate = mergeCustomDate(
+      customDate,
+      selectedValue,
+      androidPickerMode
+    );
+
+    setCustomDate(nextCustomDate);
 
     if (androidPickerMode === "date") {
       setAndroidPickerMode("time");
@@ -201,10 +214,11 @@ export default function ReminderScreen() {
 
     setShowCustomPicker(false);
     setAndroidPickerMode("date");
+    confirmCustomReminder(nextCustomDate);
   }
 
-  function confirmCustomReminder() {
-    if (customDate.getTime() <= Date.now()) {
+  function confirmCustomReminder(selectedDate: Date = customDate) {
+    if (selectedDate.getTime() <= Date.now()) {
       Alert.alert(
         "Choose a future time",
         "Please pick a date and time that is still ahead."
@@ -213,8 +227,8 @@ export default function ReminderScreen() {
     }
 
     void scheduleReminder({
-      reminderLabel: `at ${formatCustomReminder(customDate)}`,
-      triggerDate: customDate,
+      reminderLabel: `at ${formatCustomReminder(selectedDate)}`,
+      triggerDate: selectedDate,
     });
   }
 
@@ -224,10 +238,11 @@ export default function ReminderScreen() {
         flexGrow: 1,
         justifyContent: "center",
         padding: 24,
+        backgroundColor: WarmTheme.bg,
       }}
     >
-      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 16 }}>
-        When would you like to try this?
+      <Text style={{ fontSize: 22, fontWeight: "600", marginBottom: 16, color: WarmTheme.text }}>
+        When do you want to reflect on this?
       </Text>
 
       <Button
@@ -278,11 +293,11 @@ export default function ReminderScreen() {
       />
       <View style={{ height: 20 }} />
 
-      <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8 }}>
+      <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 8, color: WarmTheme.text }}>
         Custom time
       </Text>
 
-      <Text style={{ marginBottom: 12 }}>{formatCustomReminder(customDate)}</Text>
+      <Text style={{ marginBottom: 12, color: WarmTheme.mutedText }}>{formatCustomReminder(customDate)}</Text>
 
       {DateTimePicker ? (
         <>
@@ -338,7 +353,7 @@ export default function ReminderScreen() {
                   <View style={{ height: 12 }} />
                   <Button
                     title={isScheduling ? "Scheduling..." : "Use this custom time"}
-                    onPress={confirmCustomReminder}
+                    onPress={() => confirmCustomReminder()}
                     disabled={isScheduling}
                   />
                 </>
@@ -350,7 +365,7 @@ export default function ReminderScreen() {
             <>
               <Button
                 title={isScheduling ? "Scheduling..." : "Use this custom time"}
-                onPress={confirmCustomReminder}
+                onPress={() => confirmCustomReminder()}
                 disabled={isScheduling}
               />
               <View style={{ height: 12 }} />
@@ -358,14 +373,14 @@ export default function ReminderScreen() {
           ) : null}
         </>
       ) : (
-        <Text style={{ marginBottom: 20, color: "#666" }}>
+        <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
           Custom time needs a rebuilt app before the native date picker is
           available.
         </Text>
       )}
 
       {!hasNativeNotifications ? (
-        <Text style={{ marginBottom: 20, color: "#666" }}>
+        <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
           Phone reminders need a rebuilt app before native notifications are
           available.
         </Text>

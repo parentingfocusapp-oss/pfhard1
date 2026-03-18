@@ -3,6 +3,16 @@ import { Experiment } from "../types/experiment";
 
 export type FollowupMode = "build" | "alternative";
 
+function sortExperimentsByCapacity(experiments: Experiment[]): Experiment[] {
+  return [...experiments].sort((left, right) => {
+    if (left.capacityLevel !== right.capacityLevel) {
+      return left.capacityLevel - right.capacityLevel;
+    }
+
+    return left.title.localeCompare(right.title);
+  });
+}
+
 export function getExperimentList(params: {
   topic?: string;
   moment?: string;
@@ -11,11 +21,11 @@ export function getExperimentList(params: {
   const { topic, moment, balance } = params;
 
   if (topic && moment) {
-    return getExperiments(topic, moment);
+    return sortExperimentsByCapacity(getExperiments(topic, moment));
   }
 
   if (balance) {
-    return getDeepDiveExperiments(balance);
+    return sortExperimentsByCapacity(getDeepDiveExperiments(balance));
   }
 
   return [];

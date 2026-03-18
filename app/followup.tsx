@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
 import { Button, Text, View } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 import { sessionRepository } from "../lib/storage";
 import { StoredSession } from "../types/session";
 
@@ -73,6 +74,7 @@ setStep("tried");
         warmth: session.warmth,
         structure: session.structure,
         balance: session.balance,
+        reality: session.reality,
         duration: session.duration,
         followupMode: "alternative",
         sessionId: session.id,
@@ -91,6 +93,7 @@ setStep("tried");
         balance: session.balance || "",
         warmth: session.warmth || "",
         structure: session.structure || "",
+        reality: session.reality || "",
         experimentTitle: session.experimentTitle,
         experimentAction: session.experimentAction,
         experimentWhy: session.experimentWhy || "",
@@ -101,8 +104,15 @@ setStep("tried");
 
   if (step === "loading") {
     return (
-      <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-        <Text>Loading follow-up...</Text>
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          padding: 24,
+          backgroundColor: WarmTheme.bg,
+        }}
+      >
+        <Text style={{ color: WarmTheme.text }}>Loading follow-up...</Text>
       </View>
     );
   }
@@ -344,6 +354,7 @@ setStep("tried");
                 warmth: session.warmth,
                 structure: session.structure,
                 balance: session.balance,
+                reality: session.reality,
                 duration: session.duration,
                 followupMode: "build",
                 sessionId: session.id,

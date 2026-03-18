@@ -1,17 +1,25 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Button, Text, View } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 import { DurationOption } from "../types/session";
 
 export default function WarmthScreen() {
   const { duration } = useLocalSearchParams<{ duration?: DurationOption }>();
 
   return (
-    <View style={{ flex: 1, justifyContent: "center", padding: 24 }}>
-      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 20 }}>
+    <View
+      style={{
+        flex: 1,
+        justifyContent: "center",
+        padding: 24,
+        backgroundColor: WarmTheme.bg,
+      }}
+    >
+      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 20, color: WarmTheme.text }}>
         Connection and Warmth
       </Text>
 
-      <Text style={{ fontSize: 16, marginBottom: 24 }}>
+      <Text style={{ fontSize: 16, marginBottom: 24, color: WarmTheme.mutedText }}>
         When things are difficult, how easy is it at the moment to stay calm,
         warm, or emotionally connected with your child?
       </Text>

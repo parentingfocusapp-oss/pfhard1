@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
 import { Button, Text, View } from "react-native";
+import { WarmTheme } from "../constants/warmTheme";
 
 export default function ChooseParentOptionScreen() {
   const params = useLocalSearchParams<{
@@ -10,6 +11,7 @@ export default function ChooseParentOptionScreen() {
     balance?: string;
     warmth?: string;
     structure?: string;
+    reality?: string;
     parentOptions?: string;
     suggestedOptions?: string;
   }>();
@@ -21,6 +23,7 @@ export default function ChooseParentOptionScreen() {
     balance,
     warmth,
     structure,
+    reality,
     parentOptions,
     suggestedOptions,
   } = params;
@@ -61,6 +64,7 @@ export default function ChooseParentOptionScreen() {
         balance: balance || "",
         warmth: warmth || "",
         structure: structure || "",
+        reality: reality || "",
         parentOptions: JSON.stringify(options),
       },
     });
@@ -76,18 +80,19 @@ export default function ChooseParentOptionScreen() {
         balance: balance || "",
         warmth: warmth || "",
         structure: structure || "",
+        reality: reality || "",
         parentOptions: JSON.stringify([]),
       },
     });
   }
 
   return (
-    <View style={{ flex: 1, padding: 24 }}>
-      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16 }}>
+    <View style={{ flex: 1, padding: 24, backgroundColor: WarmTheme.bg }}>
+      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16, color: WarmTheme.text }}>
         Your ideas so far
       </Text>
 
-      <Text style={{ fontSize: 16, marginBottom: 16 }}>
+      <Text style={{ fontSize: 16, marginBottom: 16, color: WarmTheme.mutedText }}>
         Here are the ideas you came up with. The highlighted ones may be a
         helpful place to start.
       </Text>
@@ -101,17 +106,17 @@ export default function ChooseParentOptionScreen() {
               key={`${option}-${index}`}
               style={{
                 borderWidth: 1,
-                borderColor: isSuggested ? "#333" : "#ccc",
+                borderColor: isSuggested ? WarmTheme.accent : WarmTheme.border,
                 borderRadius: 10,
                 padding: 14,
                 marginBottom: 12,
-                backgroundColor: isSuggested ? "#f2f2f2" : "#fff",
+                backgroundColor: isSuggested ? WarmTheme.surfaceAlt : WarmTheme.surface,
               }}
             >
-              <Text style={{ fontSize: 16 }}>{option}</Text>
+              <Text style={{ fontSize: 16, color: WarmTheme.text }}>{option}</Text>
 
               {isSuggested && (
-                <Text style={{ fontSize: 12, marginTop: 6, color: "#555" }}>
+                <Text style={{ fontSize: 12, marginTop: 6, color: WarmTheme.mutedText }}>
                   Suggested starting point
                 </Text>
               )}

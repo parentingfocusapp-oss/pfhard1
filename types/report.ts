@@ -1,9 +1,8 @@
 export type SessionReport = {
-  sessionId: string;
+  anonymizedSessionId: string;
   createdAt: string;
   routeType: "short" | "deepdive";
-  summary: string;
-  experimentTitle: string;
-  experimentAction: string;
+  discussed: string;
+  agreedExperiment: string;
   followUpStatus: string;
 };

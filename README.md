@@ -49,3 +49,75 @@ Join our community of developers creating universal apps.
 - [Expo on GitHub](https://github.com/expo/expo): View our open source platform and contribute.
 - [Discord community](https://chat.expo.dev): Chat with Expo users and ask questions.
 # pfhard1
+
+## AI backend (starter)
+
+This project now includes a local backend scaffold for AI integration.
+
+### 1) Configure environment
+
+- Create `.env` in the project root using `.env.example`.
+- Create `backend/.env` using `backend/.env.example`.
+
+Root `.env`:
+
+```bash
+EXPO_PUBLIC_API_BASE_URL=http://localhost:8787
+```
+
+Backend `backend/.env`:
+
+```bash
+PORT=8787
+OPENAI_API_KEY=your_openai_api_key_here
+OPENAI_MODEL=gpt-4o-mini
+```
+
+### 2) Start backend
+
+```bash
+npm run backend:start
+```
+
+Health check:
+
+```bash
+curl http://localhost:8787/api/health
+```
+
+### 3) Start app
+
+```bash
+npx expo start
+```
+
+### Available backend endpoints
+
+- `GET /api/health`
+- `POST /api/ai/reflect`
+- `POST /api/ai/interpret-moment`
+- `POST /api/ai/interpret-parent-options`
+
+## Run app with local AI backend
+
+1. Configure root app env:
+   - Create `.env` if missing (copy from `.env.example`).
+   - Set:
+   ```bash
+   EXPO_PUBLIC_API_BASE_URL=http://192.168.1.247:8787
+   ```
+2. Configure backend env:
+   - Create `backend/.env` if missing (copy from `backend/.env.example`).
+   - In `backend/.env`, set your real `OPENAI_API_KEY` locally (do not commit it).
+3. Start backend:
+   ```bash
+   npm run backend:start
+   ```
+4. Verify backend is reachable:
+   ```bash
+   curl http://192.168.1.247:8787/api/health
+   ```
+5. Start Expo app:
+   ```bash
+   npx expo start
+   ```
