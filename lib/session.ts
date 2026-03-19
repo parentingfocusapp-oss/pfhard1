@@ -11,6 +11,8 @@ export function createSession(params: {
   reality?: string;
   warmth?: string;
   structure?: string;
+  profileQuadrant?: string;
+  suggestedDirection?: string;
   experimentId?: string;
   experimentTitle?: string;
   experimentAction?: string;
@@ -27,6 +29,8 @@ export function createSession(params: {
     reality,
     warmth,
     structure,
+    profileQuadrant,
+    suggestedDirection,
     experimentId,
     experimentTitle,
     experimentAction,
@@ -51,6 +55,8 @@ export function createSession(params: {
     structure,
     balance,
     reality,
+    profileQuadrant,
+    suggestedDirection,
 
     experimentId,
     experimentTitle: experimentTitle || "Your experiment",

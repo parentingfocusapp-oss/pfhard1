@@ -20,7 +20,23 @@ const presetTopics = [
 ];
 
 export default function TopicScreen() {
-  const { duration } = useLocalSearchParams<{ duration?: string }>();
+  const {
+    duration,
+    routeType,
+    balance,
+    warmth,
+    structure,
+    quadrant,
+    suggestedDirection,
+  } = useLocalSearchParams<{
+    duration?: string;
+    routeType?: string;
+    balance?: string;
+    warmth?: string;
+    structure?: string;
+    quadrant?: string;
+    suggestedDirection?: string;
+  }>();
   const [customTopic, setCustomTopic] = useState("");
 
   function goToMoment(topic: string) {
@@ -29,6 +45,12 @@ export default function TopicScreen() {
       params: {
         topic,
         duration: duration || "",
+        routeType: routeType || "",
+        balance: balance || "",
+        warmth: warmth || "",
+        structure: structure || "",
+        quadrant: quadrant || "",
+        suggestedDirection: suggestedDirection || "",
       },
     });
   }

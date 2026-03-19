@@ -1,5 +1,5 @@
-import { Link, useLocalSearchParams } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { router, useLocalSearchParams } from "expo-router";
+import { Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { DurationOption } from "../types/session";
 
@@ -7,56 +7,65 @@ export default function DeepDiveScreen() {
   const { duration } = useLocalSearchParams<{ duration?: DurationOption }>();
 
   return (
-    <View style={styles.container}>
-      <Text style={styles.title}>Deep Dive</Text>
-
-      <Text style={styles.body}>
-        This route takes a bit longer and helps you reflect on both connection
-        and structure before choosing one thing to try.
+    <View
+      style={{
+        flex: 1,
+        padding: 24,
+        justifyContent: "center",
+        backgroundColor: WarmTheme.bg,
+      }}
+    >
+      <Text
+        style={{
+          fontSize: 28,
+          fontWeight: "700",
+          marginBottom: 16,
+          color: WarmTheme.text,
+        }}
+      >
+        This route goes a bit deeper
       </Text>
 
-      <Link
-        href={{
-          pathname: "/warmth",
-          params: { duration: duration || "10" },
+      <Text
+        style={{
+          fontSize: 17,
+          lineHeight: 26,
+          marginBottom: 12,
+          color: WarmTheme.mutedText,
         }}
-        style={styles.button}
       >
-        Continue
-      </Link>
+        We will look at warmth and structure in a few everyday moments.
+      </Text>
+
+      <Text
+        style={{
+          fontSize: 17,
+          lineHeight: 26,
+          marginBottom: 28,
+          color: WarmTheme.mutedText,
+        }}
+      >
+        Then we will help you choose one practical thing to try.
+      </Text>
+
+      <Pressable
+        onPress={() =>
+          router.push({
+            pathname: "/warmth",
+            params: { duration: duration || "10" },
+          })
+        }
+        style={{
+          borderRadius: 10,
+          paddingVertical: 14,
+          alignItems: "center",
+          backgroundColor: WarmTheme.accent,
+        }}
+      >
+        <Text style={{ color: "#fff", fontSize: 16, fontWeight: "600" }}>
+          Continue
+        </Text>
+      </Pressable>
     </View>
   );
 }
-
-const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    padding: 24,
-    justifyContent: "center",
-    backgroundColor: WarmTheme.bg,
-  },
-  title: {
-    fontSize: 28,
-    fontWeight: "700",
-    marginBottom: 16,
-    textAlign: "center",
-    color: WarmTheme.text,
-  },
-  body: {
-    fontSize: 18,
-    lineHeight: 28,
-    textAlign: "center",
-    marginBottom: 32,
-    color: WarmTheme.mutedText,
-  },
-  button: {
-    fontSize: 18,
-    fontWeight: "600",
-    textAlign: "center",
-    paddingVertical: 14,
-    borderRadius: 10,
-    overflow: "hidden",
-    backgroundColor: WarmTheme.accent,
-    color: "#2a1b13",
-  },
-});

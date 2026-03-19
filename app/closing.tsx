@@ -14,6 +14,8 @@ export default function ClosingScreen() {
     warmth,
     structure,
     reality,
+    profileQuadrant,
+    suggestedDirection,
     experimentId,
     experimentTitle,
     experimentAction,
@@ -29,6 +31,8 @@ export default function ClosingScreen() {
     warmth?: string;
     structure?: string;
     reality?: string;
+    profileQuadrant?: string;
+    suggestedDirection?: string;
     experimentId?: string;
     experimentTitle?: string;
     experimentAction?: string;
@@ -48,6 +52,8 @@ export default function ClosingScreen() {
     warmth,
     structure,
     reality,
+    profileQuadrant,
+    suggestedDirection,
     experimentId,
     experimentTitle,
     experimentAction,

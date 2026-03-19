@@ -20,6 +20,8 @@ export type StoredSession = {
   warmth?: string;
   structure?: string;
   balance?: string;
+  profileQuadrant?: string;
+  suggestedDirection?: string;
 
   // Chosen experiment
   experimentId?: string;

@@ -9,6 +9,7 @@ import {
 import {
   FollowupMode,
   getBestScriptVariants,
+  getExperimentCardById,
   getExperimentList,
   getSelectedExperimentIndex,
 } from "../lib/experiments";
@@ -130,6 +131,9 @@ export default function ExperimentScreen() {
     sessionId?: string;
     ageBand?: ExperimentCard["ageBands"][number];
     parentCapacity?: CapacityLevel;
+    experimentId?: string;
+    quadrant?: string;
+    suggestedDirection?: string;
   }>();
 
   const topic = params.topic;
@@ -147,6 +151,9 @@ export default function ExperimentScreen() {
   const parentOptions = params.parentOptions;
   const ageBand = params.ageBand;
   const parentCapacity = params.parentCapacity;
+  const experimentId = params.experimentId;
+  const quadrant = params.quadrant;
+  const suggestedDirection = params.suggestedDirection;
 
   const [previousSession, setPreviousSession] = useState<StoredSession | null>(
     null
@@ -193,7 +200,7 @@ export default function ExperimentScreen() {
     void loadPreviousSession();
   }, [sessionId]);
 
-  const experiments = getExperimentList({
+  const rankedExperiments = getExperimentList({
     topic,
     moment,
     balance,
@@ -208,6 +215,21 @@ export default function ExperimentScreen() {
     ageBand,
     parentCapacity,
   });
+
+  const experiments = useMemo(() => {
+    if (!experimentId) {
+      return rankedExperiments;
+    }
+
+    const selectedCard = getExperimentCardById(experimentId);
+
+    if (!selectedCard) {
+      return rankedExperiments;
+    }
+
+    const others = rankedExperiments.filter((card) => card.id !== selectedCard.id);
+    return [selectedCard, ...others];
+  }, [experimentId, rankedExperiments]);
 
   const parsedParentIdeas = useMemo(() => {
     if (!parentOptions) return [];
@@ -264,6 +286,8 @@ export default function ExperimentScreen() {
     requestedChoiceIndex >= 0 &&
     requestedChoiceIndex < choices.length
       ? requestedChoiceIndex
+      : experimentId
+      ? Math.min(parentChoiceCount, choices.length - 1)
       : choices.length > 0
       ? Math.min(
           parentChoiceCount +
@@ -513,6 +537,8 @@ export default function ExperimentScreen() {
               warmth: warmth || "",
               structure: structure || "",
               reality: reality || "",
+              profileQuadrant: quadrant || "",
+              suggestedDirection: suggestedDirection || "",
               experimentId: selectedChoice.kind === "library" ? selectedChoice.id : "",
               experimentTitle: selectedChoice.title,
               experimentAction: selectedChoice.action,
@@ -576,6 +602,8 @@ export default function ExperimentScreen() {
               warmth: warmth || "",
               structure: structure || "",
               reality: reality || "",
+              quadrant: quadrant || "",
+              suggestedDirection: suggestedDirection || "",
               parentOptions: parentOptions || JSON.stringify([]),
               index: String((selectedChoiceIndex + 1) % choices.length),
               duration: duration || "",

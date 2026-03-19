@@ -13,9 +13,24 @@ import { momentOptions } from "../data/options";
 import { interpretOwnMoment } from "../lib/ai/client";
 
 export default function MomentScreen() {
-  const { topic, duration } = useLocalSearchParams<{
+  const {
+    topic,
+    duration,
+    routeType,
+    balance,
+    warmth,
+    structure,
+    quadrant,
+    suggestedDirection,
+  } = useLocalSearchParams<{
     topic?: string;
     duration?: string;
+    routeType?: string;
+    balance?: string;
+    warmth?: string;
+    structure?: string;
+    quadrant?: string;
+    suggestedDirection?: string;
   }>();
 
   const [selectedMoment, setSelectedMoment] = useState("");
@@ -27,20 +42,55 @@ export default function MomentScreen() {
   const canContinue = chosenMoment.length > 0 && !isLoadingAi;
   const hasPresetOptions = options.length > 0;
 
+  function buildNextParams(nextValues: {
+    topic: string;
+    moment: string;
+    rawMoment?: string;
+    momentSource: "preset" | "typed";
+  }) {
+    if (routeType === "deepdive") {
+      return {
+        pathname: "/balance" as const,
+        params: {
+          topic: nextValues.topic,
+          moment: nextValues.moment,
+          rawMoment: nextValues.rawMoment || "",
+          momentSource: nextValues.momentSource,
+          duration: duration || "10",
+          routeType: "deepdive",
+          balance: balance || "",
+          warmth: warmth || "",
+          structure: structure || "",
+          quadrant: quadrant || "",
+          suggestedDirection: suggestedDirection || "",
+        },
+      };
+    }
+
+    return {
+      pathname: "/process" as const,
+      params: {
+        topic: nextValues.topic,
+        moment: nextValues.moment,
+        rawMoment: nextValues.rawMoment || "",
+        momentSource: nextValues.momentSource,
+        duration: duration || "10",
+      },
+    };
+  }
+
   async function handleContinue() {
     const isTypedMoment = !selectedMoment && momentText.trim().length > 0;
 
     // If the user selected a preset moment, skip AI
     if (!isTypedMoment) {
-      router.push({
-        pathname: "/process",
-        params: {
+      router.push(
+        buildNextParams({
           topic: topic || "",
           moment: chosenMoment,
           momentSource: "preset",
-          duration: duration || "10",
-        },
-      });
+        })
+      );
       return;
     }
 
@@ -53,32 +103,27 @@ export default function MomentScreen() {
         knownMoments: options,
       });
 
-      router.push({
-        pathname: "/process",
-        params: {
-          topic: interpreted.topic !== "Unknown" ? interpreted.topic : topic || "",
+      const nextTopic =
+        interpreted.topic !== "Unknown" ? interpreted.topic : topic || "";
+
+      router.push(
+        buildNextParams({
+          topic: nextTopic,
           moment: interpreted.label,
-          matchedMoment: interpreted.matchedMoment,
-          momentSummary: interpreted.summary,
-          momentThemes: JSON.stringify(interpreted.themes),
           rawMoment: momentText.trim(),
           momentSource: "typed",
-          duration: duration || "10",
-        },
-      });
+        })
+      );
     } catch {
       // Fallback if AI fails
-      router.push({
-        pathname: "/process",
-        params: {
+      router.push(
+        buildNextParams({
           topic: topic || "",
           moment: momentText.trim(),
-          matchedMoment: "custom",
           rawMoment: momentText.trim(),
           momentSource: "typed",
-          duration: duration || "10",
-        },
-      });
+        })
+      );
     } finally {
       setIsLoadingAi(false);
     }

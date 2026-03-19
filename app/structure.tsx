@@ -1,77 +1,130 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { Button, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import { Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
+import { structureScenarios } from "../lib/deepdive";
 import { DurationOption } from "../types/session";
 
 export default function StructureScreen() {
-  const { warmth, duration } = useLocalSearchParams<{
-    warmth?: string;
+  const { warmthSelections, duration } = useLocalSearchParams<{
+    warmthSelections?: string;
     duration?: DurationOption;
   }>();
+  const [selected, setSelected] = useState<Record<string, string>>({});
+
+  const parsedWarmthSelections = useMemo(() => {
+    if (!warmthSelections) return [];
+
+    try {
+      const parsed = JSON.parse(warmthSelections);
+      return Array.isArray(parsed)
+        ? parsed.filter((item) => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }, [warmthSelections]);
+
+  const allSelected = structureScenarios.every((scenario) => selected[scenario.id]);
 
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
+    <ScrollView
+      contentContainerStyle={{
         padding: 24,
+        paddingBottom: 40,
         backgroundColor: WarmTheme.bg,
       }}
     >
-      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 20, color: WarmTheme.text }}>
-        Structure and Boundaries
+      <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
+        Structure in hard moments
       </Text>
 
       <Text style={{ fontSize: 16, marginBottom: 24, color: WarmTheme.mutedText }}>
-        How clear and consistent do expectations and boundaries feel at the
-        moment?
+        Again, pick the response that feels most like you in real life.
       </Text>
 
-      <Button
-        title="Very clear – expectations are mostly understood"
-        onPress={() =>
+      {structureScenarios.map((scenario, index) => (
+        <View
+          key={scenario.id}
+          style={{
+            borderWidth: 1,
+            borderColor: WarmTheme.border,
+            borderRadius: 14,
+            padding: 16,
+            marginBottom: 18,
+            backgroundColor: WarmTheme.surface,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: "700", marginBottom: 8, color: WarmTheme.accent }}>
+            Scenario {index + 1}
+          </Text>
+          <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 14, color: WarmTheme.text }}>
+            {scenario.prompt}
+          </Text>
+
+          {scenario.options.map((option) => {
+            const isSelected = selected[scenario.id] === option.id;
+
+            return (
+              <Pressable
+                key={option.id}
+                onPress={() =>
+                  setSelected((current) => ({
+                    ...current,
+                    [scenario.id]: option.id,
+                  }))
+                }
+                style={{
+                  borderWidth: 1,
+                  borderColor: isSelected ? WarmTheme.accent : WarmTheme.border,
+                  borderRadius: 10,
+                  padding: 14,
+                  marginBottom: 10,
+                  backgroundColor: isSelected
+                    ? WarmTheme.surfaceAlt
+                    : WarmTheme.bg,
+                }}
+              >
+                <Text style={{ fontWeight: "700", marginBottom: 6, color: WarmTheme.text }}>
+                  {option.label}
+                </Text>
+                <Text style={{ color: WarmTheme.text }}>{option.text}</Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ))}
+
+      <Pressable
+        onPress={() => {
+          if (!allSelected) return;
+
           router.push({
-            pathname: "/reality-moment-goal",
-            params: { warmth, structure: "high", duration: duration || "10" },
-          })
-        }
-      />
-
-      <View style={{ height: 12 }} />
-
-      <Button
-        title="Sometimes clear, but often repeated"
-        onPress={() =>
-          router.push({
-            pathname: "/reality-moment-goal",
-            params: { warmth, structure: "medium", duration: duration || "10" },
-          })
-        }
-      />
-
-      <View style={{ height: 12 }} />
-
-      <Button
-        title="Often unclear or inconsistent"
-        onPress={() =>
-          router.push({
-            pathname: "/reality-moment-goal",
-            params: { warmth, structure: "low", duration: duration || "10" },
-          })
-        }
-      />
-
-      <View style={{ height: 12 }} />
-
-      <Button
-        title="It depends on the situation"
-        onPress={() =>
-          router.push({
-            pathname: "/reality-moment-goal",
-            params: { warmth, structure: "mixed", duration: duration || "10" },
-          })
-        }
-      />
-    </View>
+            pathname: "/deepdive-feedback",
+            params: {
+              duration: duration || "10",
+              warmthSelections: JSON.stringify(parsedWarmthSelections),
+              structureSelections: JSON.stringify(Object.values(selected)),
+            },
+          });
+        }}
+        disabled={!allSelected}
+        style={{
+          borderRadius: 10,
+          paddingVertical: 14,
+          alignItems: "center",
+          backgroundColor: allSelected ? WarmTheme.accent : WarmTheme.border,
+        }}
+      >
+        <Text
+          style={{
+            color: allSelected ? "#fff" : WarmTheme.mutedText,
+            fontWeight: "600",
+          }}
+        >
+          See my reflection
+        </Text>
+      </Pressable>
+    </ScrollView>
   );
 }

@@ -1,7 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useState } from "react";
 import {
-  Button,
   KeyboardAvoidingView,
   Platform,
   Pressable,
@@ -11,60 +10,73 @@ import {
   View,
 } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
-import { interpretParentOptions } from "../lib/ai/client";
+import { generateBlendedOptions } from "../lib/deepdive";
+import { ParentingProfile } from "../types/deepdive";
 import { DurationOption } from "../types/session";
 
-const MAX_IDEAS = 3;
+const MAX_IDEAS = 6;
+const TARGET_IDEAS = 3;
 
-export default function OptionsScreen() {
-  const { topic, moment, balance, warmth, structure, reality, duration } =
-    useLocalSearchParams<{
-      topic?: string;
-      moment?: string;
-      balance?: string;
-      warmth?: string;
-      structure?: string;
-      reality?: string;
-      duration?: DurationOption;
-    }>();
+export default function BalanceScreen() {
+  const {
+    topic,
+    moment,
+    rawMoment,
+    momentSource,
+    balance,
+    warmth,
+    structure,
+    quadrant,
+    suggestedDirection,
+    duration,
+  } = useLocalSearchParams<{
+    topic?: string;
+    moment?: string;
+    rawMoment?: string;
+    momentSource?: string;
+    balance?: string;
+    warmth?: ParentingProfile["warmthLevel"];
+    structure?: ParentingProfile["structureLevel"];
+    quadrant?: string;
+    suggestedDirection?: string;
+    duration?: DurationOption;
+  }>();
 
   const [currentIdea, setCurrentIdea] = useState("");
   const [ideas, setIdeas] = useState<string[]>([]);
-  const [isLoadingAi, setIsLoadingAi] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+
+  const profile: ParentingProfile = {
+    warmthLevel: warmth || "medium",
+    structureLevel: structure || "medium",
+    quadrant: quadrant || "relatively balanced",
+    suggestedDirection:
+      suggestedDirection ||
+      "A small shift in one repeated moment could help here.",
+  };
 
   function addIdea() {
     const trimmed = currentIdea.trim();
-    if (!trimmed) return;
-    if (ideas.length >= MAX_IDEAS) return;
+    if (!trimmed || ideas.length >= MAX_IDEAS) return;
 
-    setIdeas((prev) => [...prev, trimmed]);
+    setIdeas((current) => [...current, trimmed]);
     setCurrentIdea("");
   }
 
   function removeIdea(index: number) {
-    setIdeas((prev) => prev.filter((_, i) => i !== index));
+    setIdeas((current) => current.filter((_, currentIndex) => currentIndex !== index));
   }
 
-  async function continueWithIdeas() {
-    const trimmed = currentIdea.trim();
-
-    let finalIdeas = ideas;
-    if (trimmed && ideas.length < MAX_IDEAS) {
-      finalIdeas = [...ideas, trimmed];
-    }
-
-    if (finalIdeas.length === 0) return;
-
+  async function continueToOptions(useIdeas: string[]) {
     try {
-      setIsLoadingAi(true);
+      setIsLoading(true);
 
-      const interpreted = await interpretParentOptions({
+      const generated = await generateBlendedOptions({
         topic,
         moment,
-        balance,
-        warmth,
-        structure,
-        parentOptions: finalIdeas.slice(0, MAX_IDEAS),
+        goal: balance,
+        profile,
+        parentOptions: useIdeas,
       });
 
       router.push({
@@ -72,52 +84,28 @@ export default function OptionsScreen() {
         params: {
           topic: topic || "",
           moment: moment || "",
+          rawMoment: rawMoment || "",
+          momentSource: momentSource || "",
           balance: balance || "",
-          warmth: warmth || "",
-          structure: structure || "",
-          reality: reality || "",
+          warmth: profile.warmthLevel,
+          structure: profile.structureLevel,
+          quadrant: profile.quadrant,
+          suggestedDirection: profile.suggestedDirection,
           duration: duration || "10",
-
-          parentOptions: JSON.stringify(interpreted.cleanedOptions),
-          suggestedOptions: JSON.stringify(interpreted.suggestedCarryForward),
-        },
-      });
-    } catch {
-      router.push({
-        pathname: "/choose-parent-option",
-        params: {
-          topic: topic || "",
-          moment: moment || "",
-          balance: balance || "",
-          warmth: warmth || "",
-          structure: structure || "",
-          reality: reality || "",
-          duration: duration || "10",
-          parentOptions: JSON.stringify(finalIdeas.slice(0, MAX_IDEAS)),
+          parentOptions: JSON.stringify(useIdeas),
+          generatedOptions: JSON.stringify(
+            generated.map(({ experimentCard, ...option }) => option)
+          ),
         },
       });
     } finally {
-      setIsLoadingAi(false);
+      setIsLoading(false);
     }
   }
 
-  function skipForNow() {
-    router.push({
-      pathname: "/experiment",
-      params: {
-        topic: topic || "",
-        moment: moment || "",
-        balance: balance || "",
-        warmth: warmth || "",
-        structure: structure || "",
-        reality: reality || "",
-        duration: duration || "10",
-        parentOptions: JSON.stringify([]),
-      },
-    });
-  }
-
   const canAddMore = ideas.length < MAX_IDEAS;
+  const trimmedIdea = currentIdea.trim();
+  const currentTotal = ideas.length + (trimmedIdea ? 1 : 0);
 
   return (
     <KeyboardAvoidingView
@@ -128,55 +116,54 @@ export default function OptionsScreen() {
         contentContainerStyle={{ padding: 24, paddingBottom: 40 }}
         keyboardShouldPersistTaps="handled"
       >
-        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 16, color: WarmTheme.text }}>
-          Your ideas
+        <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
+          What ideas have you already had?
         </Text>
 
-        <Text style={{ fontSize: 16, marginBottom: 16, color: WarmTheme.mutedText }}>
-          What have you already thought of trying? Add up to three ideas, even if
-          they feel rough or unfinished.
+        <Text style={{ fontSize: 16, marginBottom: 10, color: WarmTheme.mutedText }}>
+          Aim for about {TARGET_IDEAS}. Rough ideas are fine.
         </Text>
 
-        {ideas.length > 0 && (
-          <View style={{ marginBottom: 20 }}>
-            <Text style={{ fontSize: 18, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
-              Your ideas so far
-            </Text>
+        <Text style={{ fontSize: 15, marginBottom: 20, color: WarmTheme.mutedText }}>
+          We will use them to shape a few structured options, not to judge whether they are good enough.
+        </Text>
 
+        {ideas.length > 0 ? (
+          <View style={{ marginBottom: 18 }}>
             {ideas.map((idea, index) => (
               <View
                 key={`${idea}-${index}`}
                 style={{
                   borderWidth: 1,
                   borderColor: WarmTheme.border,
-                  borderRadius: 8,
+                  borderRadius: 10,
                   padding: 12,
                   marginBottom: 10,
+                  backgroundColor: WarmTheme.surface,
                 }}
               >
                 <Text style={{ marginBottom: 8, color: WarmTheme.text }}>{idea}</Text>
-
                 <Pressable onPress={() => removeIdea(index)}>
                   <Text style={{ color: WarmTheme.danger }}>Remove</Text>
                 </Pressable>
               </View>
             ))}
           </View>
-        )}
+        ) : null}
 
         {canAddMore ? (
           <>
             <TextInput
               value={currentIdea}
               onChangeText={setCurrentIdea}
-              placeholder="Type one idea here"
+              placeholder="For example: keep my words shorter, give a warning earlier, stay calmer at the start"
               multiline
               style={{
                 borderWidth: 1,
                 borderColor: WarmTheme.border,
-                borderRadius: 8,
+                borderRadius: 10,
                 padding: 12,
-                minHeight: 90,
+                minHeight: 110,
                 textAlignVertical: "top",
                 marginBottom: 12,
                 backgroundColor: WarmTheme.surface,
@@ -185,27 +172,67 @@ export default function OptionsScreen() {
               placeholderTextColor={WarmTheme.mutedText}
             />
 
-            <Button title="Add idea" onPress={addIdea} />
+            <Pressable
+              onPress={addIdea}
+              style={{
+                borderRadius: 10,
+                paddingVertical: 12,
+                alignItems: "center",
+                marginBottom: 20,
+                backgroundColor: WarmTheme.surfaceAlt,
+              }}
+            >
+              <Text style={{ color: WarmTheme.text, fontWeight: "600" }}>Add idea</Text>
+            </Pressable>
           </>
         ) : (
-          <Text style={{ marginBottom: 16, color: "#555" }}>
-            You’ve added three ideas. You can continue, or remove one if you want
-            to change it.
+          <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
+            You have enough ideas here to make a useful set of options.
           </Text>
         )}
 
-        <View style={{ height: 24 }} />
+        {currentTotal > 0 && currentTotal < TARGET_IDEAS ? (
+          <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
+            One or two more would help, but you can still continue now if you want.
+          </Text>
+        ) : null}
 
-        <Button
-          title={
-            isLoadingAi ? "Looking at your ideas..." : "Continue with my ideas"
+        <Pressable
+          onPress={() =>
+            continueToOptions(
+              trimmedIdea && ideas.length < MAX_IDEAS ? [...ideas, trimmedIdea] : ideas
+            )
           }
-          onPress={continueWithIdeas}
-        />
+          disabled={isLoading}
+          style={{
+            borderRadius: 10,
+            paddingVertical: 14,
+            alignItems: "center",
+            marginBottom: 12,
+            backgroundColor: WarmTheme.accent,
+          }}
+        >
+          <Text style={{ color: "#fff", fontWeight: "600" }}>
+            {isLoading ? "Building your options..." : "Continue"}
+          </Text>
+        </Pressable>
 
-        <View style={{ height: 12 }} />
-
-        <Button title="Skip for now" onPress={skipForNow} />
+        <Pressable
+          onPress={() => continueToOptions([])}
+          disabled={isLoading}
+          style={{
+            borderRadius: 10,
+            paddingVertical: 14,
+            alignItems: "center",
+            backgroundColor: WarmTheme.surface,
+            borderWidth: 1,
+            borderColor: WarmTheme.border,
+          }}
+        >
+          <Text style={{ color: WarmTheme.text, fontWeight: "600" }}>
+            Skip my ideas and show structured options
+          </Text>
+        </Pressable>
       </ScrollView>
     </KeyboardAvoidingView>
   );
