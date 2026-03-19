@@ -31,11 +31,11 @@ export type GeneratedOption = {
   id: string;
   parentText: string;
   interpretedAs: string;
+  strategyLabel: string;
   experimentId: string;
   title: string;
   whatToDo: string;
-  example: string;
-  whyItWorks: string;
+  whyThisFits: string;
   source: "blended";
 };
 

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Button, ScrollView, Text, View } from "react-native";
+import { Button, Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import {
   getBackendDebugSource,
@@ -165,6 +165,7 @@ export default function ExperimentScreen() {
   const [appliedExampleSource, setAppliedExampleSource] = useState<
     "backend" | "fallback" | null
   >(null);
+  const [showSecondaryScripts, setShowSecondaryScripts] = useState(false);
 
   useEffect(() => {
     async function loadAiBadge() {
@@ -299,12 +300,24 @@ export default function ExperimentScreen() {
   const selectedChoice = choices[selectedChoiceIndex];
   const hasAlternativeChoices = choices.length > 1;
 
+  useEffect(() => {
+    setShowSecondaryScripts(false);
+  }, [selectedChoiceIndex]);
+
   const heading =
     followupMode === "build"
       ? "Build on what worked"
       : followupMode === "alternative"
       ? "Try another idea for this area"
+      : experimentId
+      ? "Experiment"
       : "Choose one experiment";
+  const growthHint =
+    structure === "low"
+      ? "This adds a bit more structure than your usual pattern."
+      : warmth === "low"
+      ? "This leans slightly more on connection."
+      : null;
 
   if (isLoadingPrevious) {
     return (
@@ -327,12 +340,18 @@ export default function ExperimentScreen() {
         style={{
           fontSize: 22,
           fontWeight: "600",
-          marginBottom: 20,
+          marginBottom: 10,
           color: WarmTheme.text,
         }}
       >
         {heading}
       </Text>
+
+      {experimentId ? (
+        <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
+          Here&apos;s one small way to try this.
+        </Text>
+      ) : null}
 
       <View
         style={{
@@ -420,6 +439,12 @@ export default function ExperimentScreen() {
             </View>
           ) : null}
 
+          {growthHint ? (
+            <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
+              {growthHint}
+            </Text>
+          ) : null}
+
           <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
             Why this might help: {selectedChoice.why}
           </Text>
@@ -432,25 +457,33 @@ export default function ExperimentScreen() {
 
           {selectedChoice.secondaryScripts?.length ? (
             <View style={{ marginBottom: 10 }}>
-              <Text
+              <Pressable
+                onPress={() => setShowSecondaryScripts((current) => !current)}
                 style={{
-                  marginBottom: 8,
-                  color: WarmTheme.mutedText,
-                  fontSize: 12,
-                  fontWeight: "600",
+                  alignSelf: "flex-start",
+                  borderRadius: 999,
+                  paddingHorizontal: 12,
+                  paddingVertical: 8,
+                  backgroundColor: WarmTheme.surface,
+                  borderWidth: 1,
+                  borderColor: WarmTheme.border,
                 }}
               >
-                More ways to say it
-              </Text>
-
-              {selectedChoice.secondaryScripts.map((script, index) => (
-                <Text
-                  key={`${selectedChoice.id || selectedChoice.title}-script-${index}`}
-                  style={{ marginBottom: 6, color: WarmTheme.text }}
-                >
-                  {script}
+                <Text style={{ color: WarmTheme.text, fontWeight: "600" }}>
+                  {showSecondaryScripts ? "Hide more ways to say it" : "Show more ways to say it"}
                 </Text>
-              ))}
+              </Pressable>
+
+              {showSecondaryScripts
+                ? selectedChoice.secondaryScripts.map((script, index) => (
+                    <Text
+                      key={`${selectedChoice.id || selectedChoice.title}-script-${index}`}
+                      style={{ marginTop: 10, color: WarmTheme.text }}
+                    >
+                      {script}
+                    </Text>
+                  ))
+                : null}
             </View>
           ) : null}
 

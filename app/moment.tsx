@@ -142,7 +142,15 @@ export default function MomentScreen() {
           What moment is hardest right now?
         </Text>
 
-        {topic ? (
+        <Text style={{ marginBottom: 16, color: WarmTheme.mutedText }}>
+          {routeType === "deepdive"
+            ? "Before I suggest anything, let's include your own ideas."
+            : topic
+            ? `Topic: ${topic}`
+            : ""}
+        </Text>
+
+        {routeType !== "deepdive" && topic ? (
           <Text style={{ marginBottom: 16, color: WarmTheme.mutedText }}>
             Topic: {topic}
           </Text>
@@ -236,7 +244,11 @@ export default function MomentScreen() {
               fontWeight: "600",
             }}
           >
-            {isLoadingAi ? "Making sense of your moment..." : "Continue"}
+            {isLoadingAi
+              ? "Making sense of your moment..."
+              : routeType === "deepdive"
+              ? "Continue to your ideas"
+              : "Continue"}
           </Text>
         </Pressable>
       </ScrollView>

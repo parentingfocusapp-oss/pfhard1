@@ -1,6 +1,5 @@
 import { interpretParentOptions } from "./ai/client";
 import {
-  getBestScriptVariants,
   getExperimentCardById,
   getMatchingExperimentCards,
   rankExperimentCards,
@@ -363,6 +362,38 @@ function getClusterTags(interpretedAs: string) {
   return ["small-step", "routine"];
 }
 
+function getStrategyLabel(interpretedAs: string) {
+  if (interpretedAs.includes("structure")) {
+    return "More structure first";
+  }
+
+  if (interpretedAs.includes("warmth")) {
+    return "More connection first";
+  }
+
+  return "Balanced approach";
+}
+
+function getWhyThisFits(params: {
+  interpretedAs: string;
+  profile: ParentingProfile;
+  experiment: ExperimentCard;
+}) {
+  if (params.interpretedAs.includes("structure")) {
+    return "Helps make the next step clearer without adding more pressure.";
+  }
+
+  if (params.interpretedAs.includes("warmth")) {
+    return "Helps reduce resistance before the limit or task.";
+  }
+
+  if (params.profile.quadrant === "lower both") {
+    return "Keeps things simpler for you while still giving your child direction.";
+  }
+
+  return params.experiment.whyItWorks;
+}
+
 function getRankedMatch(params: {
   topic?: string;
   moment?: string;
@@ -485,18 +516,20 @@ export async function generateBlendedOptions(params: {
       continue;
     }
 
-    const scripts = getBestScriptVariants(experiment, {}).primary;
-
     usedExperimentIds.add(experiment.id);
     results.push({
       id: `generated-${experiment.id}`,
       parentText: interpreted.parentText,
       interpretedAs: interpreted.interpretedAs,
+      strategyLabel: getStrategyLabel(interpreted.interpretedAs),
       experimentId: experiment.id,
       title: experiment.title,
       whatToDo: experiment.whatToDo,
-      example: scripts?.text || experiment.scripts[0]?.text || experiment.whatToDo,
-      whyItWorks: experiment.whyItWorks,
+      whyThisFits: getWhyThisFits({
+        interpretedAs: interpreted.interpretedAs,
+        profile: params.profile,
+        experiment,
+      }),
       source: "blended",
       experimentCard: experiment,
     });
@@ -513,18 +546,18 @@ export async function generateBlendedOptions(params: {
         id: `generated-${fallback.id}`,
         parentText: params.goal || "A steadier response",
         interpretedAs: "make the moment smaller and steadier",
+        strategyLabel: "Balanced approach",
         experimentId: fallback.id,
         title: fallback.title,
         whatToDo: fallback.whatToDo,
-        example: fallback.scripts[0]?.text || fallback.whatToDo,
-        whyItWorks: fallback.whyItWorks,
+        whyThisFits: fallback.whyItWorks,
         source: "blended",
         experimentCard: fallback,
       });
     }
   }
 
-  return results.slice(0, 4);
+  return results.slice(0, 3);
 }
 
 export function reviveGeneratedOptions(payload: string | undefined): GeneratedOptionWithCard[] {

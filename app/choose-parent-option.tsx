@@ -120,12 +120,35 @@ export default function ChooseParentOptionScreen() {
       }}
     >
       <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
-        Options shaped around your ideas
+        Here are a few options built from your ideas
       </Text>
 
       <Text style={{ fontSize: 16, marginBottom: 22, color: WarmTheme.mutedText }}>
-        Each option starts from what you said, then links to one structured experiment from the library.
+        Pick the one that feels easiest to try.
       </Text>
+
+      {parentOptions.length > 0 ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: WarmTheme.border,
+            borderRadius: 14,
+            padding: 16,
+            marginBottom: 16,
+            backgroundColor: WarmTheme.surfaceAlt,
+          }}
+        >
+          <Text style={{ fontSize: 12, fontWeight: "700", marginBottom: 8, color: WarmTheme.accent }}>
+            Using your ideas
+          </Text>
+
+          {parentOptions.slice(0, 3).map((idea, index) => (
+            <Text key={`${idea}-${index}`} style={{ marginBottom: 6, color: WarmTheme.text }}>
+              - {idea}
+            </Text>
+          ))}
+        </View>
+      ) : null}
 
       {options.map((option) => (
         <Pressable
@@ -158,7 +181,7 @@ export default function ChooseParentOptionScreen() {
           }}
         >
           <Text style={{ fontSize: 12, fontWeight: "700", marginBottom: 8, color: WarmTheme.accent }}>
-            Based on your idea to {option.parentText.toLowerCase()}
+            {option.strategyLabel}
           </Text>
 
           <Text style={{ fontSize: 20, fontWeight: "700", marginBottom: 10, color: WarmTheme.text }}>
@@ -169,28 +192,12 @@ export default function ChooseParentOptionScreen() {
             {option.whatToDo}
           </Text>
 
-          <View
-            style={{
-              borderWidth: 1,
-              borderColor: WarmTheme.border,
-              borderRadius: 10,
-              padding: 12,
-              marginBottom: 12,
-              backgroundColor: WarmTheme.bg,
-            }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: "700", marginBottom: 6, color: WarmTheme.mutedText }}>
-              Example
-            </Text>
-            <Text style={{ color: WarmTheme.text }}>{option.example}</Text>
-          </View>
-
           <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
-            Why this might help: {option.whyItWorks}
+            Why this fits: {option.whyThisFits}
           </Text>
 
           <Text style={{ color: WarmTheme.mutedText }}>
-            Interpreted as: {option.interpretedAs}
+            Built from your idea about {option.parentText.toLowerCase()}.
           </Text>
         </Pressable>
       ))}
@@ -209,7 +216,7 @@ export default function ChooseParentOptionScreen() {
           <Text style={{ marginBottom: 10, color: WarmTheme.text }}>
             {isRecovering
               ? "Rebuilding your options..."
-              : "We could not load the blended options for this moment."}
+              : "We could not load the options for this moment."}
           </Text>
 
           {!isRecovering ? (
@@ -218,6 +225,12 @@ export default function ChooseParentOptionScreen() {
             </Text>
           ) : null}
         </View>
+      ) : null}
+
+      {options.length > 0 ? (
+        <Text style={{ marginBottom: 16, color: WarmTheme.mutedText }}>
+          Let&apos;s turn that into one small experiment.
+        </Text>
       ) : null}
 
       <Pressable

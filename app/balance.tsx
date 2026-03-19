@@ -14,8 +14,8 @@ import { generateBlendedOptions } from "../lib/deepdive";
 import { ParentingProfile } from "../types/deepdive";
 import { DurationOption } from "../types/session";
 
-const MAX_IDEAS = 6;
-const TARGET_IDEAS = 3;
+const MAX_IDEAS = 3;
+const TARGET_IDEAS = 2;
 
 export default function BalanceScreen() {
   const {
@@ -120,12 +120,8 @@ export default function BalanceScreen() {
           What ideas have you already had?
         </Text>
 
-        <Text style={{ fontSize: 16, marginBottom: 10, color: WarmTheme.mutedText }}>
-          Aim for about {TARGET_IDEAS}. Rough ideas are fine.
-        </Text>
-
-        <Text style={{ fontSize: 15, marginBottom: 20, color: WarmTheme.mutedText }}>
-          We will use them to shape a few structured options, not to judge whether they are good enough.
+        <Text style={{ fontSize: 16, marginBottom: 20, color: WarmTheme.mutedText }}>
+          They don&apos;t need to be perfect. Two or three is enough.
         </Text>
 
         {ideas.length > 0 ? (
@@ -193,7 +189,7 @@ export default function BalanceScreen() {
 
         {currentTotal > 0 && currentTotal < TARGET_IDEAS ? (
           <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
-            One or two more would help, but you can still continue now if you want.
+            One more would be ideal, but you can continue now if you want.
           </Text>
         ) : null}
 
@@ -203,16 +199,22 @@ export default function BalanceScreen() {
               trimmedIdea && ideas.length < MAX_IDEAS ? [...ideas, trimmedIdea] : ideas
             )
           }
-          disabled={isLoading}
+          disabled={isLoading || currentTotal === 0}
           style={{
             borderRadius: 10,
             paddingVertical: 14,
             alignItems: "center",
             marginBottom: 12,
-            backgroundColor: WarmTheme.accent,
+            backgroundColor:
+              isLoading || currentTotal === 0 ? WarmTheme.border : WarmTheme.accent,
           }}
         >
-          <Text style={{ color: "#fff", fontWeight: "600" }}>
+          <Text
+            style={{
+              color: isLoading || currentTotal === 0 ? WarmTheme.mutedText : "#fff",
+              fontWeight: "600",
+            }}
+          >
             {isLoading ? "Building your options..." : "Continue"}
           </Text>
         </Pressable>
@@ -230,7 +232,7 @@ export default function BalanceScreen() {
           }}
         >
           <Text style={{ color: WarmTheme.text, fontWeight: "600" }}>
-            Skip my ideas and show structured options
+            Skip if nothing comes to mind
           </Text>
         </Pressable>
       </ScrollView>

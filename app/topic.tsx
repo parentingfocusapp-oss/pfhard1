@@ -83,8 +83,9 @@ export default function TopicScreen() {
         </Text>
 
         <Text style={{ marginBottom: 20, color: WarmTheme.mutedText }}>
-          Pick the closest fit, or describe another problem if the main issue is
-          somewhere else.
+          {routeType === "deepdive"
+            ? "Good — now choose where this shows up most."
+            : "Pick the closest fit, or describe another problem if the main issue is somewhere else."}
         </Text>
 
         {presetTopics.map((topic) => (

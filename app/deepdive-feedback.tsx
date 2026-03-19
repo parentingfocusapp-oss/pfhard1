@@ -2,7 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
-import { buildParentingProfile, getProfileInterpretation } from "../lib/deepdive";
+import { buildParentingProfile } from "../lib/deepdive";
 import { DurationOption } from "../types/session";
 
 function parseSelectionList(value?: string) {
@@ -35,7 +35,22 @@ export default function DeepDiveFeedbackScreen() {
     [structureSelections, warmthSelections]
   );
 
-  const interpretation = getProfileInterpretation(profile);
+  const leanLabel =
+    profile.quadrant === "higher warmth / lower structure"
+      ? "more on warmth"
+      : profile.quadrant === "higher structure / lower warmth"
+      ? "more on structure"
+      : profile.quadrant === "lower both"
+      ? "stretched in both"
+      : "fairly balanced";
+  const directionLabel =
+    profile.quadrant === "higher warmth / lower structure"
+      ? "clearer structure while keeping your warmth"
+      : profile.quadrant === "higher structure / lower warmth"
+      ? "a little more connection inside your clarity"
+      : profile.quadrant === "lower both"
+      ? "something simpler, calmer, and clearer"
+      : "using both warmth and structure more deliberately";
 
   return (
     <View
@@ -47,19 +62,15 @@ export default function DeepDiveFeedbackScreen() {
       }}
     >
       <Text style={{ fontSize: 24, fontWeight: "600", marginBottom: 12, color: WarmTheme.text }}>
-        A simple picture of your pattern
+        A quick reflection
       </Text>
 
-      <Text style={{ fontSize: 14, fontWeight: "700", marginBottom: 10, color: WarmTheme.accent }}>
-        {profile.quadrant}
+      <Text style={{ fontSize: 17, lineHeight: 26, marginBottom: 10, color: WarmTheme.text }}>
+        You tend to lean {leanLabel}.
       </Text>
 
-      <Text style={{ fontSize: 17, lineHeight: 26, marginBottom: 14, color: WarmTheme.text }}>
-        {interpretation}
-      </Text>
-
-      <Text style={{ fontSize: 16, lineHeight: 25, marginBottom: 28, color: WarmTheme.mutedText }}>
-        {profile.suggestedDirection}
+      <Text style={{ fontSize: 16, lineHeight: 24, marginBottom: 28, color: WarmTheme.mutedText }}>
+        We&apos;ll gently move toward {directionLabel}.
       </Text>
 
       <Pressable
@@ -83,7 +94,7 @@ export default function DeepDiveFeedbackScreen() {
         }}
       >
         <Text style={{ color: "#fff", fontWeight: "600" }}>
-          Continue
+          Now let&apos;s focus this on one real situation.
         </Text>
       </Pressable>
     </View>

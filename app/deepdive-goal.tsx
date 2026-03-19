@@ -58,7 +58,7 @@ export default function DeepDiveGoalScreen() {
         </Text>
 
         <Text style={{ fontSize: 16, marginBottom: 18, color: WarmTheme.mutedText }}>
-          Keep it simple. We only need one direction for this round.
+          Now let&apos;s focus this on one real situation.
         </Text>
 
         <TextInput
@@ -113,7 +113,7 @@ export default function DeepDiveGoalScreen() {
           }}
         >
           <Text style={{ color: "#fff", fontWeight: "600" }}>
-            Continue to the real moment
+            Continue
           </Text>
         </Pressable>
       </ScrollView>
