@@ -11,6 +11,7 @@ export function createSession(params: {
   reality?: string;
   warmth?: string;
   structure?: string;
+  experimentId?: string;
   experimentTitle?: string;
   experimentAction?: string;
   experimentWhy?: string;
@@ -26,6 +27,7 @@ export function createSession(params: {
     reality,
     warmth,
     structure,
+    experimentId,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -50,6 +52,7 @@ export function createSession(params: {
     balance,
     reality,
 
+    experimentId,
     experimentTitle: experimentTitle || "Your experiment",
     experimentAction: experimentAction || "No experiment selected.",
     experimentWhy,

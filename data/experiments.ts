@@ -1,6 +1,441 @@
-import { Experiment } from "../types/experiment";
+import {
+  AgeBand,
+  CapacityLevel,
+  ExperimentCard,
+  IntensityLevel,
+  ScriptVariant,
+} from "../types/experiment";
 
-const shortRouteExperiments: Record<string, Record<string, Experiment[]>> = {
+type LegacyExperiment = {
+  id: string;
+  title: string;
+  action: string;
+  why: string;
+  capacityLevel: 1 | 2 | 3;
+};
+
+const ALL_AGE_BANDS: AgeBand[] = ["2-3", "4-5", "6-8", "9-12", "13-16"];
+
+const CAPACITY_BY_LEVEL: Record<LegacyExperiment["capacityLevel"], CapacityLevel> = {
+  1: "low",
+  2: "medium",
+  3: "high",
+};
+
+function getCapacityRank(level: CapacityLevel) {
+  if (level === "low") return 1;
+  if (level === "medium") return 2;
+  return 3;
+}
+
+function lowerFirst(value: string) {
+  if (!value) return value;
+  return value.charAt(0).toLowerCase() + value.slice(1);
+}
+
+function getContextLabel(topic: string, moment: string) {
+  if (!moment) return topic.toLowerCase();
+  return `${topic.toLowerCase()} ${moment.toLowerCase()}`;
+}
+
+function detectPattern(action: string, title: string) {
+  const haystack = `${title} ${action}`.toLowerCase();
+
+  if (
+    haystack.includes("choice") ||
+    haystack.includes("choose one") ||
+    haystack.includes("two choices") ||
+    haystack.includes("two acceptable")
+  ) {
+    return "choice";
+  }
+
+  if (
+    haystack.includes("warning") ||
+    haystack.includes("countdown") ||
+    haystack.includes("timer") ||
+    haystack.includes("5-minute") ||
+    haystack.includes("10-minute")
+  ) {
+    return "warning";
+  }
+
+  if (
+    haystack.includes("script") ||
+    haystack.includes("sentence") ||
+    haystack.includes("phrase") ||
+    haystack.includes("repeat")
+  ) {
+    return "script";
+  }
+
+  if (
+    haystack.includes("acknowledge") ||
+    haystack.includes("feeling") ||
+    haystack.includes("understanding") ||
+    haystack.includes("warm tone") ||
+    haystack.includes("emotion")
+  ) {
+    return "acknowledge";
+  }
+
+  if (
+    haystack.includes("predictable") ||
+    haystack.includes("routine") ||
+    haystack.includes("night before") ||
+    haystack.includes("landing spot") ||
+    haystack.includes("prepare") ||
+    haystack.includes("final check") ||
+    haystack.includes("same order")
+  ) {
+    return "routine";
+  }
+
+  if (
+    haystack.includes("5 minutes") ||
+    haystack.includes("first step") ||
+    haystack.includes("easiest") ||
+    haystack.includes("small") ||
+    haystack.includes("one minute") ||
+    haystack.includes("start")
+  ) {
+    return "small-start";
+  }
+
+  if (
+    haystack.includes("return") ||
+    haystack.includes("follow-through") ||
+    haystack.includes("next step") ||
+    haystack.includes("move straight") ||
+    haystack.includes("pause") ||
+    haystack.includes("clear direction")
+  ) {
+    return "follow-through";
+  }
+
+  return "generic";
+}
+
+function buildScripts(params: {
+  id: string;
+  topic: string;
+  moment: string;
+  title: string;
+  action: string;
+}): ScriptVariant[] {
+  const { id, topic, moment, title, action } = params;
+  const pattern = detectPattern(action, title);
+  const context = getContextLabel(topic, moment);
+
+  const byPattern: Record<string, [string, string, string, string]> = {
+    choice: [
+      "You can pick between these two options. We are still doing it now.",
+      "Do you want this one or this one? Then we are moving on.",
+      "You can choose how you do it, but not whether it happens.",
+      "I am keeping the choice small so I do not have to argue about the whole thing.",
+    ],
+    warning: [
+      `You have a short warning, then we are moving on from ${context}.`,
+      "When the timer ends, it is time. I will help you do the next step.",
+      "You have a few minutes left. Then we are done and moving on.",
+      "I am giving one heads-up and then following through, not starting a debate.",
+    ],
+    script: [
+      "I am going to say this once and keep it the same each time.",
+      "Time for the next step. I am not adding lots of extra words.",
+      "I hear you. My answer is still the same.",
+      "I am using one calm line so I do not have to keep re-explaining.",
+    ],
+    acknowledge: [
+      "I know this is hard. The limit is still the same.",
+      "You are upset, and I am here. We are still doing the next step.",
+      "I get why you do not like this. I am still holding the boundary.",
+      "I am going to keep the warmth and the limit, even if I am tired.",
+    ],
+    routine: [
+      `Let us set up ${context} the same way each time so it feels easier to start.`,
+      "This goes here first, then we do the next part.",
+      "Let us sort this now so the hard moment is smaller later.",
+      "I am going to make this more predictable instead of talking more in the moment.",
+    ],
+    "small-start": [
+      "Let us just do the first tiny part together.",
+      "We are starting with one small bit, not the whole thing.",
+      "Do the easiest piece first. Then we can look at the rest.",
+      "I am shrinking the start so it feels possible for both of us.",
+    ],
+    "follow-through": [
+      "It is time for the next step now. I am keeping this short.",
+      "We are moving now. I will help you begin.",
+      "I am not arguing every part of this. We are moving it forward.",
+      "I am going brief and steady so I can actually follow through.",
+    ],
+    generic: [
+      "I am going to keep this simple and clear.",
+      "First this, then the next thing.",
+      "Let us make this smaller so we can actually get started.",
+      "I am choosing the simplest version I can hold today.",
+    ],
+  };
+
+  const [primary, younger, older, lowEnergy] = byPattern[pattern] || byPattern.generic;
+
+  return [
+    {
+      id: `${id}-default`,
+      label: "Default",
+      text: primary,
+      ageBands: ALL_AGE_BANDS,
+      capacity: ["medium", "high"],
+    },
+    {
+      id: `${id}-younger`,
+      label: "Younger child",
+      text: younger,
+      ageBands: ["2-3", "4-5", "6-8"],
+    },
+    {
+      id: `${id}-older`,
+      label: "Older child",
+      text: older,
+      ageBands: ["9-12", "13-16"],
+    },
+    {
+      id: `${id}-low-energy`,
+      label: "Low-energy version",
+      text: lowEnergy,
+      capacity: ["low", "medium"],
+    },
+  ];
+}
+
+function buildGoals(topic: string, moment: string, action: string, title: string) {
+  const haystack = `${topic} ${moment} ${title} ${action}`.toLowerCase();
+  const goals = new Set<string>();
+
+  if (
+    haystack.includes("warning") ||
+    haystack.includes("transition") ||
+    haystack.includes("leave") ||
+    haystack.includes("upstairs") ||
+    haystack.includes("screen")
+  ) {
+    goals.add("make transitions easier");
+  }
+
+  if (
+    haystack.includes("repeat") ||
+    haystack.includes("boundary") ||
+    haystack.includes("clear") ||
+    haystack.includes("follow-through")
+  ) {
+    goals.add("hold the boundary calmly");
+  }
+
+  if (
+    haystack.includes("acknowledge") ||
+    haystack.includes("warm") ||
+    haystack.includes("connection") ||
+    haystack.includes("understanding")
+  ) {
+    goals.add("stay connected while guiding");
+  }
+
+  if (
+    haystack.includes("start") ||
+    haystack.includes("first step") ||
+    haystack.includes("easiest") ||
+    haystack.includes("five minutes")
+  ) {
+    goals.add("help the child get started");
+  }
+
+  if (
+    haystack.includes("predictable") ||
+    haystack.includes("routine") ||
+    haystack.includes("night before") ||
+    haystack.includes("prepare")
+  ) {
+    goals.add("reduce friction before the moment");
+  }
+
+  if (
+    haystack.includes("calm") ||
+    haystack.includes("less words") ||
+    haystack.includes("brief")
+  ) {
+    goals.add("lower tension quickly");
+  }
+
+  if (goals.size === 0) {
+    goals.add("make the next moment easier");
+  }
+
+  return [...goals];
+}
+
+function buildTags(topic: string, moment: string, action: string, title: string) {
+  const haystack = `${title} ${action}`.toLowerCase();
+  const tags = new Set<string>([
+    topic.toLowerCase(),
+    moment.toLowerCase(),
+  ]);
+
+  if (haystack.includes("choice")) tags.add("choice");
+  if (haystack.includes("warning") || haystack.includes("countdown") || haystack.includes("timer")) {
+    tags.add("transition");
+  }
+  if (haystack.includes("script") || haystack.includes("sentence") || haystack.includes("phrase")) {
+    tags.add("script");
+  }
+  if (haystack.includes("predictable") || haystack.includes("routine") || haystack.includes("prepare")) {
+    tags.add("routine");
+  }
+  if (haystack.includes("acknowledge") || haystack.includes("warm")) {
+    tags.add("connection");
+  }
+  if (haystack.includes("clear") || haystack.includes("follow-through") || haystack.includes("boundary")) {
+    tags.add("structure");
+  }
+  if (haystack.includes("first step") || haystack.includes("start") || haystack.includes("easiest")) {
+    tags.add("small-step");
+  }
+
+  return [...tags];
+}
+
+function inferWarmthLevel(action: string, title: string): IntensityLevel {
+  const haystack = `${title} ${action}`.toLowerCase();
+
+  if (
+    haystack.includes("warm") ||
+    haystack.includes("acknowledge") ||
+    haystack.includes("soothing") ||
+    haystack.includes("reassuring") ||
+    haystack.includes("connection")
+  ) {
+    return "high";
+  }
+
+  if (
+    haystack.includes("calm") ||
+    haystack.includes("support") ||
+    haystack.includes("presence")
+  ) {
+    return "medium";
+  }
+
+  return "low";
+}
+
+function inferStructureLevel(action: string, title: string): IntensityLevel {
+  const haystack = `${title} ${action}`.toLowerCase();
+
+  if (
+    haystack.includes("clear") ||
+    haystack.includes("boundary") ||
+    haystack.includes("follow-through") ||
+    haystack.includes("rule") ||
+    haystack.includes("repeat")
+  ) {
+    return "high";
+  }
+
+  if (
+    haystack.includes("routine") ||
+    haystack.includes("predictable") ||
+    haystack.includes("step") ||
+    haystack.includes("warning")
+  ) {
+    return "medium";
+  }
+
+  return "low";
+}
+
+function buildLowCapacityTip(action: string) {
+  const pattern = detectPattern(action, action);
+
+  if (pattern === "script") {
+    return "If you are running on empty, pick one line and repeat only that.";
+  }
+
+  if (pattern === "routine") {
+    return "If today is a lot, change just one part of the setup instead of the whole routine.";
+  }
+
+  if (pattern === "acknowledge") {
+    return "You do not need a long speech. One warm line is enough.";
+  }
+
+  return "Make it as small as possible and aim for steady, not perfect.";
+}
+
+function buildCommonMistake(action: string) {
+  const pattern = detectPattern(action, action);
+
+  if (pattern === "warning") {
+    return "Giving lots of extra warnings usually weakens the warning you mean.";
+  }
+
+  if (pattern === "choice") {
+    return "Too many choices can turn the moment into a negotiation.";
+  }
+
+  if (pattern === "script") {
+    return "Changing your wording every time can pull you back into the argument.";
+  }
+
+  return "The usual trap is adding more words when the moment already feels hot.";
+}
+
+function toExperimentCard(
+  topic: string,
+  moment: string,
+  experiment: LegacyExperiment
+): ExperimentCard {
+  const parentCapacity = [CAPACITY_BY_LEVEL[experiment.capacityLevel]];
+
+  return {
+    id: experiment.id,
+    topic,
+    moments: [moment],
+    title: experiment.title,
+    whatToDo: experiment.action,
+    whyItWorks: experiment.why,
+    scripts: buildScripts({
+      id: experiment.id,
+      topic,
+      moment,
+      title: experiment.title,
+      action: experiment.action,
+    }),
+    whenToUse: `Use this when ${moment.toLowerCase()} is the sticking point.`,
+    lowCapacityTip: buildLowCapacityTip(experiment.action),
+    commonMistake: buildCommonMistake(experiment.action),
+    ageBands: ALL_AGE_BANDS,
+    parentCapacity,
+    goals: buildGoals(topic, moment, experiment.action, experiment.title),
+    warmthLevel: inferWarmthLevel(experiment.action, experiment.title),
+    structureLevel: inferStructureLevel(experiment.action, experiment.title),
+    tags: buildTags(topic, moment, experiment.action, experiment.title),
+  };
+}
+
+function sortCards(cards: ExperimentCard[]) {
+  return [...cards].sort((left, right) => {
+    const leftRank = Math.min(...left.parentCapacity.map(getCapacityRank));
+    const rightRank = Math.min(...right.parentCapacity.map(getCapacityRank));
+
+    if (leftRank !== rightRank) {
+      return leftRank - rightRank;
+    }
+
+    return left.title.localeCompare(right.title);
+  });
+}
+
+const shortRouteExperiments: Record<string, Record<string, LegacyExperiment[]>> = {
   "Morning routine": {
     "Getting dressed": [
       {
@@ -566,7 +1001,7 @@ const shortRouteExperiments: Record<string, Record<string, Experiment[]>> = {
   },
 };
 
-const deepDiveExperiments: Record<string, Experiment[]> = {
+const deepDiveExperiments: Record<string, LegacyExperiment[]> = {
   warmth: [
     {
       id: "deep-warmth-one-understanding-sentence",
@@ -670,7 +1105,7 @@ const deepDiveExperiments: Record<string, Experiment[]> = {
   ],
 };
 
-const defaultShortRouteExperiments: Experiment[] = [
+const defaultShortRouteExperiments: LegacyExperiment[] = [
   {
     id: "short-default-choice-instruction-step",
     title: "One small calm step",
@@ -703,7 +1138,7 @@ const defaultShortRouteExperiments: Experiment[] = [
 
 const keywordExperimentLibraries: Array<{
   keywords: string[];
-  experiments: Experiment[];
+  experiments: LegacyExperiment[];
 }> = [
   {
     keywords: ["sibling", "brother", "sister", "fighting", "sharing"],
@@ -863,7 +1298,7 @@ const keywordExperimentLibraries: Array<{
   },
 ];
 
-function getKeywordExperiments(topic: string, moment: string): Experiment[] | null {
+function getKeywordExperiments(topic: string, moment: string): LegacyExperiment[] | null {
   const haystack = `${topic} ${moment}`.toLowerCase();
 
   for (const library of keywordExperimentLibraries) {
@@ -875,7 +1310,7 @@ function getKeywordExperiments(topic: string, moment: string): Experiment[] | nu
   return null;
 }
 
-export function getExperiments(topic: string, moment: string): Experiment[] {
+function getLegacyExperiments(topic: string, moment: string): LegacyExperiment[] {
   return (
     shortRouteExperiments[topic]?.[moment] ||
     getKeywordExperiments(topic, moment) ||
@@ -883,6 +1318,63 @@ export function getExperiments(topic: string, moment: string): Experiment[] {
   );
 }
 
-export function getDeepDiveExperiments(balance: string): Experiment[] {
+function getLegacyDeepDiveExperiments(balance: string): LegacyExperiment[] {
   return deepDiveExperiments[balance] || deepDiveExperiments.default;
+}
+
+export function getExperimentCards(topic: string, moment: string): ExperimentCard[] {
+  return sortCards(
+    getLegacyExperiments(topic, moment).map((experiment) =>
+      toExperimentCard(topic, moment, experiment)
+    )
+  );
+}
+
+export function getDeepDiveExperimentCards(balance: string): ExperimentCard[] {
+  return sortCards(
+    getLegacyDeepDiveExperiments(balance).map((experiment) =>
+      toExperimentCard(balance, balance, experiment)
+    )
+  );
+}
+
+export function getAllExperimentCards(): ExperimentCard[] {
+  const allCards: ExperimentCard[] = [];
+
+  for (const [topic, moments] of Object.entries(shortRouteExperiments)) {
+    for (const [moment, experiments] of Object.entries(moments)) {
+      allCards.push(
+        ...experiments.map((experiment) => toExperimentCard(topic, moment, experiment))
+      );
+    }
+  }
+
+  for (const [balance, experiments] of Object.entries(deepDiveExperiments)) {
+    allCards.push(
+      ...experiments.map((experiment) => toExperimentCard(balance, balance, experiment))
+    );
+  }
+
+  for (const experiment of defaultShortRouteExperiments) {
+    allCards.push(toExperimentCard("General", "General", experiment));
+  }
+
+  for (const library of keywordExperimentLibraries) {
+    for (const experiment of library.experiments) {
+      allCards.push(toExperimentCard("Keyword", library.keywords[0] || "keyword", experiment));
+    }
+  }
+
+  const seen = new Set<string>();
+
+  return sortCards(
+    allCards.filter((card) => {
+      if (seen.has(card.id)) {
+        return false;
+      }
+
+      seen.add(card.id);
+      return true;
+    })
+  );
 }

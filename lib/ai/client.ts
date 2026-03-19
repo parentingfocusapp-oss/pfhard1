@@ -104,8 +104,9 @@ export async function getReflectionAssist(
     console.warn("[AI] Using local reflection fallback.");
 
     const suggestedExperiment =
-      request.experimentOptions.find((option) => option.capacityLevel === 1) ||
-      request.experimentOptions[0];
+      request.experimentOptions.find((option) =>
+        option.parentCapacity.includes("low")
+      ) || request.experimentOptions[0];
 
     if (request.reflectionText?.trim()) {
       return {

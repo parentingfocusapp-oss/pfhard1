@@ -26,6 +26,7 @@ export default function WillScreen() {
     warmth,
     structure,
     reality,
+    experimentId,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -38,6 +39,7 @@ export default function WillScreen() {
     warmth?: string;
     structure?: string;
     reality?: string;
+    experimentId?: string;
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
@@ -94,6 +96,7 @@ export default function WillScreen() {
         warmth: warmth || "",
         structure: structure || "",
         reality: reality || "",
+        experimentId: experimentId || "",
         experimentTitle: experimentTitle || "",
         experimentAction: experimentAction || "",
         experimentWhy: experimentWhy || "",

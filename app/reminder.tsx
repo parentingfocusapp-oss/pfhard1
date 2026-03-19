@@ -81,6 +81,7 @@ export default function ReminderScreen() {
     warmth,
     structure,
     reality,
+    experimentId,
     experimentTitle,
     experimentAction,
     experimentWhy,
@@ -95,6 +96,7 @@ export default function ReminderScreen() {
     warmth?: string;
     structure?: string;
     reality?: string;
+    experimentId?: string;
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
@@ -122,6 +124,7 @@ export default function ReminderScreen() {
         warmth: warmth || "",
         structure: structure || "",
         reality: reality || "",
+        experimentId: experimentId || "",
         experimentTitle: experimentTitle || "",
         experimentAction: experimentAction || "",
         experimentWhy: experimentWhy || "",

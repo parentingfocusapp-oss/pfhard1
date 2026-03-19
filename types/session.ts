@@ -22,6 +22,7 @@ export type StoredSession = {
   balance?: string;
 
   // Chosen experiment
+  experimentId?: string;
   experimentTitle: string;
   experimentAction: string;
   experimentWhy?: string;

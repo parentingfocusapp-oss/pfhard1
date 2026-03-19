@@ -1,4 +1,4 @@
-import { Experiment } from "../../types/experiment";
+import { ExperimentAIPayload } from "../../types/experiment";
 
 export type ReflectionAssistRequest = {
   routeType: "short" | "deepdive";
@@ -13,7 +13,7 @@ export type ReflectionAssistRequest = {
 
   reflectionText?: string;
 
-  experimentOptions: Experiment[];
+  experimentOptions: ExperimentAIPayload[];
 };
 
 export type ReflectionAssistResponse = {

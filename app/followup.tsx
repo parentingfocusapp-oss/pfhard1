@@ -94,6 +94,7 @@ setStep("tried");
         warmth: session.warmth || "",
         structure: session.structure || "",
         reality: session.reality || "",
+        experimentId: session.experimentId || "",
         experimentTitle: session.experimentTitle,
         experimentAction: session.experimentAction,
         experimentWhy: session.experimentWhy || "",
