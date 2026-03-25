@@ -11,8 +11,10 @@ import {
   IntensityLevel,
   ScriptVariant,
 } from "../types/experiment";
+import { ShortExperimentSource } from "./ai/types";
 
 export type FollowupMode = "build" | "alternative";
+export type MatchStrength = "strong" | "fallback";
 
 type ExperimentMatchParams = {
   topic?: string;
@@ -30,6 +32,27 @@ type ScriptSelectionParams = {
   ageBand?: AgeBand;
   parentCapacity?: CapacityLevel;
 };
+
+const ageBandOverlapMap: Record<AgeBand, AgeBand[]> = {
+  "2-3": ["2-3"],
+  "3-5": ["2-3", "4-5"],
+  "4-5": ["4-5"],
+  "6-8": ["6-8"],
+  "6-10": ["6-8", "9-12"],
+  "9-12": ["9-12"],
+  "11-16": ["9-12", "13-16"],
+  "13-16": ["13-16"],
+};
+
+function ageBandMatches(selectedAgeBand: AgeBand | undefined, supportedAgeBands: AgeBand[]) {
+  if (!selectedAgeBand) return false;
+
+  const matchingBands = ageBandOverlapMap[selectedAgeBand] || [selectedAgeBand];
+
+  return supportedAgeBands.some((supportedAgeBand) =>
+    matchingBands.includes(supportedAgeBand)
+  );
+}
 
 function getCapacityRank(level: CapacityLevel) {
   if (level === "low") return 1;
@@ -49,7 +72,7 @@ function scoreCard(card: ExperimentCard, params: ExperimentMatchParams) {
   if (params.topic && card.topic === params.topic) score += 10;
   if (params.moment && card.moments.includes(params.moment)) score += 10;
   if (params.balance && card.topic === params.balance) score += 10;
-  if (params.ageBand && card.ageBands.includes(params.ageBand)) score += 3;
+  if (params.ageBand && ageBandMatches(params.ageBand, card.ageBands)) score += 3;
   if (params.parentCapacity && card.parentCapacity.includes(params.parentCapacity)) {
     score += 5;
   }
@@ -97,7 +120,7 @@ export function getMatchingExperimentCards(
       return false;
     }
 
-    if (ageBand && !card.ageBands.includes(ageBand)) {
+    if (ageBand && !ageBandMatches(ageBand, card.ageBands)) {
       return false;
     }
 
@@ -138,7 +161,7 @@ function scoreScriptVariant(
 ) {
   let score = 0;
 
-  if (params.ageBand && script.ageBands?.includes(params.ageBand)) {
+  if (params.ageBand && script.ageBands && ageBandMatches(params.ageBand, script.ageBands)) {
     score += 4;
   }
 
@@ -201,8 +224,99 @@ export function toExperimentAIPayload(card: ExperimentCard): ExperimentAIPayload
   };
 }
 
+export function toShortExperimentSource(
+  card: ExperimentCard,
+  params: ScriptSelectionParams
+): ShortExperimentSource {
+  const { primary } = getBestScriptVariants(card, params);
+
+  return {
+    ...toExperimentAIPayload(card),
+    script: primary?.text,
+    tags: card.tags,
+  };
+}
+
 export function getExperimentList(params: ExperimentMatchParams): ExperimentCard[] {
-  return rankExperimentCards(getMatchingExperimentCards(params), params);
+  return getExperimentSelection(params).experiments;
+}
+
+function getTopicFallbackCards(params: ExperimentMatchParams) {
+  if (!params.topic) return [];
+
+  const allCards = getAllExperimentCards().filter((card) => card.topic === params.topic);
+
+  const ageFiltered = params.ageBand
+    ? allCards.filter((card) => ageBandMatches(params.ageBand, card.ageBands))
+    : allCards;
+
+  const capacityFiltered = params.parentCapacity
+    ? ageFiltered.filter((card) => card.parentCapacity.includes(params.parentCapacity!))
+    : ageFiltered;
+
+  return capacityFiltered.length > 0
+    ? capacityFiltered
+    : ageFiltered.length > 0
+    ? ageFiltered
+    : allCards;
+}
+
+function getUniversalFallbackCards(params: ExperimentMatchParams) {
+  const allCards = getAllExperimentCards();
+  const ageFiltered = params.ageBand
+    ? allCards.filter((card) => ageBandMatches(params.ageBand, card.ageBands))
+    : allCards;
+
+  const lowRiskCards = ageFiltered.filter((card) => getPrimaryCapacity(card) === "low");
+
+  return lowRiskCards.length > 0 ? lowRiskCards : ageFiltered;
+}
+
+export function getExperimentSelection(params: ExperimentMatchParams): {
+  experiments: ExperimentCard[];
+  matchStrength: MatchStrength;
+} {
+  const strongMatches = rankExperimentCards(getMatchingExperimentCards(params), params);
+
+  if (strongMatches.length > 0) {
+    return {
+      experiments: strongMatches,
+      matchStrength: "strong",
+    };
+  }
+
+  const relaxedParams: ExperimentMatchParams = {
+    topic: params.topic,
+    moment: params.moment,
+    balance: params.balance,
+    ageBand: params.ageBand,
+    parentCapacity: params.parentCapacity,
+    warmthLevel: params.warmthLevel,
+    structureLevel: params.structureLevel,
+  };
+
+  const closeMatches = rankExperimentCards(getMatchingExperimentCards(relaxedParams), relaxedParams);
+
+  if (closeMatches.length > 0) {
+    return {
+      experiments: closeMatches,
+      matchStrength: "fallback",
+    };
+  }
+
+  const topicFallbacks = rankExperimentCards(getTopicFallbackCards(relaxedParams), relaxedParams);
+
+  if (topicFallbacks.length > 0) {
+    return {
+      experiments: topicFallbacks,
+      matchStrength: "fallback",
+    };
+  }
+
+  return {
+    experiments: rankExperimentCards(getUniversalFallbackCards(relaxedParams), relaxedParams),
+    matchStrength: "fallback",
+  };
 }
 
 export function getSelectedExperimentIndex(params: {

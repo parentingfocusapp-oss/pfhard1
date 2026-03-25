@@ -4,6 +4,7 @@ import { Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { generateBlendedOptions, reviveGeneratedOptions } from "../lib/deepdive";
 import { GeneratedOptionWithCard, ParentingProfile } from "../types/deepdive";
+import { AgeBand } from "../types/experiment";
 
 function readString(value: string | string[] | undefined) {
   if (Array.isArray(value)) {
@@ -40,6 +41,7 @@ export default function ChooseParentOptionScreen() {
     structure?: ParentingProfile["structureLevel"] | ParentingProfile["structureLevel"][];
     quadrant?: string | string[];
     suggestedDirection?: string | string[];
+    ageBand?: AgeBand | AgeBand[];
     parentOptions?: string | string[];
     generatedOptions?: string | string[];
   }>();
@@ -52,6 +54,7 @@ export default function ChooseParentOptionScreen() {
   const balance = readString(params.balance);
   const quadrant = readString(params.quadrant);
   const suggestedDirection = readString(params.suggestedDirection);
+  const ageBand = readString(params.ageBand) as AgeBand | undefined;
   const warmth = readString(params.warmth) as ParentingProfile["warmthLevel"] | undefined;
   const structure = readString(
     params.structure
@@ -167,6 +170,7 @@ export default function ChooseParentOptionScreen() {
                 structure: profile.structureLevel,
                 quadrant: profile.quadrant,
                 suggestedDirection: profile.suggestedDirection,
+                ageBand: ageBand || "",
                 experimentId: option.experimentId,
               },
             })

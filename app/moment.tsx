@@ -11,6 +11,7 @@ import {
 import { WarmTheme } from "../constants/warmTheme";
 import { momentOptions } from "../data/options";
 import { interpretOwnMoment } from "../lib/ai/client";
+import { AgeBand } from "../types/experiment";
 
 export default function MomentScreen() {
   const {
@@ -22,6 +23,7 @@ export default function MomentScreen() {
     structure,
     quadrant,
     suggestedDirection,
+    ageBand,
   } = useLocalSearchParams<{
     topic?: string;
     duration?: string;
@@ -31,6 +33,7 @@ export default function MomentScreen() {
     structure?: string;
     quadrant?: string;
     suggestedDirection?: string;
+    ageBand?: AgeBand;
   }>();
 
   const [selectedMoment, setSelectedMoment] = useState("");
@@ -63,6 +66,7 @@ export default function MomentScreen() {
           structure: structure || "",
           quadrant: quadrant || "",
           suggestedDirection: suggestedDirection || "",
+          ageBand: ageBand || "",
         },
       };
     }
@@ -75,6 +79,7 @@ export default function MomentScreen() {
         rawMoment: nextValues.rawMoment || "",
         momentSource: nextValues.momentSource,
         duration: duration || "10",
+        ageBand: ageBand || "",
       },
     };
   }

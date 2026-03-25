@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import { Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { buildParentingProfile } from "../lib/deepdive";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 function parseSelectionList(value?: string) {
@@ -19,11 +20,12 @@ function parseSelectionList(value?: string) {
 }
 
 export default function DeepDiveFeedbackScreen() {
-  const { warmthSelections, structureSelections, duration } =
+  const { warmthSelections, structureSelections, duration, ageBand } =
     useLocalSearchParams<{
       warmthSelections?: string;
       structureSelections?: string;
       duration?: DurationOption;
+      ageBand?: AgeBand;
     }>();
 
   const profile = useMemo(
@@ -79,6 +81,7 @@ export default function DeepDiveFeedbackScreen() {
             pathname: "/deepdive-goal",
             params: {
               duration: duration || "10",
+              ageBand: ageBand || "",
               warmth: profile.warmthLevel,
               structure: profile.structureLevel,
               quadrant: profile.quadrant,

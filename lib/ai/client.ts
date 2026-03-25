@@ -4,6 +4,8 @@ import {
   InterpretedMoment,
   ReflectionAssistRequest,
   ReflectionAssistResponse,
+  ShortExperimentRequest,
+  ShortExperimentResponse,
 } from "./types";
 
 const API_BASE_URL = (process.env.EXPO_PUBLIC_API_BASE_URL || "").replace(
@@ -26,6 +28,10 @@ export type BackendDebugSource = {
 
 export type AppliedExperimentExampleResult = {
   example: string;
+  source: "backend" | "fallback";
+};
+
+export type TailoredShortExperimentResult = ShortExperimentResponse & {
   source: "backend" | "fallback";
 };
 
@@ -289,6 +295,84 @@ export async function getAppliedExperimentExample(input: {
   } catch {
     return {
       example: buildLocalAppliedExperimentExample(input),
+      source: "fallback",
+    };
+  }
+}
+
+function buildLocalShortExperimentFallback(
+  request: ShortExperimentRequest
+): ShortExperimentResponse {
+  const baseOption = request.experimentOptions[0];
+
+  return {
+    title: baseOption?.title || "One small calm step",
+    whatToDo:
+      baseOption?.whatToDo ||
+      "Pick one small next step, keep your words brief, and stay steady.",
+    script:
+      baseOption?.script ||
+      "I'm keeping this simple. Here's the next step.",
+    whyItWorks:
+      baseOption?.whyItWorks ||
+      "A smaller, steadier response is often easier for both of you to follow.",
+  };
+}
+
+export async function getTailoredShortExperiment(
+  request: ShortExperimentRequest
+): Promise<TailoredShortExperimentResult> {
+  console.log("[AI] Short experiment start", {
+    apiBaseUrl: API_BASE_URL || "(missing)",
+    endpoint: `${API_BASE_URL}/api/ai/short-experiment`,
+    hasOptions: request.experimentOptions.length > 0,
+    topic: request.topic,
+    moment: request.moment,
+    ageBand: request.ageBand,
+  });
+
+  if (!request.experimentOptions.length) {
+    console.warn("[AI] Short experiment skipped: no experiment options available.");
+    const fallback = buildLocalShortExperimentFallback(request);
+    return {
+      ...fallback,
+      source: "fallback",
+    };
+  }
+
+  try {
+    const backendResponse = await postToBackend<ShortExperimentResponse>(
+      "/api/ai/short-experiment",
+      request
+    );
+
+    if (
+      backendResponse?.title?.trim() &&
+      backendResponse?.whatToDo?.trim() &&
+      backendResponse?.script?.trim() &&
+      backendResponse?.whyItWorks?.trim()
+    ) {
+      console.log("[AI] Short experiment backend response received.");
+      return {
+        title: backendResponse.title.trim(),
+        whatToDo: backendResponse.whatToDo.trim(),
+        script: backendResponse.script.trim(),
+        whyItWorks: backendResponse.whyItWorks.trim(),
+        source: "backend",
+      };
+    }
+
+    console.warn("[AI] Short experiment falling back after empty backend response.");
+    const fallback = buildLocalShortExperimentFallback(request);
+    return {
+      ...fallback,
+      source: "fallback",
+    };
+  } catch {
+    console.warn("[AI] Short experiment threw before backend response. Falling back.");
+    const fallback = buildLocalShortExperimentFallback(request);
+    return {
+      ...fallback,
       source: "fallback",
     };
   }

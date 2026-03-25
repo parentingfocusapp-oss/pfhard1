@@ -1,10 +1,14 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 export default function DeepDiveScreen() {
-  const { duration } = useLocalSearchParams<{ duration?: DurationOption }>();
+  const { duration, ageBand } = useLocalSearchParams<{
+    duration?: DurationOption;
+    ageBand?: AgeBand;
+  }>();
 
   return (
     <View
@@ -52,7 +56,7 @@ export default function DeepDiveScreen() {
         onPress={() =>
           router.push({
             pathname: "/warmth",
-            params: { duration: duration || "10" },
+            params: { duration: duration || "10", ageBand: ageBand || "" },
           })
         }
         style={{

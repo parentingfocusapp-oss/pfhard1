@@ -11,6 +11,7 @@ import {
   View,
 } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
+import { AgeBand } from "../types/experiment";
 
 const presetTopics = [
   "Morning routine",
@@ -28,6 +29,7 @@ export default function TopicScreen() {
     structure,
     quadrant,
     suggestedDirection,
+    ageBand,
   } = useLocalSearchParams<{
     duration?: string;
     routeType?: string;
@@ -36,6 +38,7 @@ export default function TopicScreen() {
     structure?: string;
     quadrant?: string;
     suggestedDirection?: string;
+    ageBand?: AgeBand;
   }>();
   const [customTopic, setCustomTopic] = useState("");
 
@@ -51,6 +54,7 @@ export default function TopicScreen() {
         structure: structure || "",
         quadrant: quadrant || "",
         suggestedDirection: suggestedDirection || "",
+        ageBand: ageBand || "",
       },
     });
   }

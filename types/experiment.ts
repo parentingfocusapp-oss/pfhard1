@@ -1,4 +1,12 @@
-export type AgeBand = "2-3" | "4-5" | "6-8" | "9-12" | "13-16";
+export type AgeBand =
+  | "2-3"
+  | "3-5"
+  | "4-5"
+  | "6-8"
+  | "6-10"
+  | "9-12"
+  | "11-16"
+  | "13-16";
 
 export type CapacityLevel = "low" | "medium" | "high";
 

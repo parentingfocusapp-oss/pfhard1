@@ -155,6 +155,130 @@ function normalizeAppliedExperiment(value, fallbackExample) {
   };
 }
 
+function normalizeShortExperiment(value, fallback) {
+  const source = value && typeof value === "object" ? value : {};
+
+  return {
+    title: cleanText(source.title, fallback.title),
+    whatToDo: cleanText(source.whatToDo, fallback.whatToDo),
+    script: cleanText(source.script, fallback.script),
+    whyItWorks: cleanText(source.whyItWorks, fallback.whyItWorks),
+  };
+}
+
+function isOlderChildBand(ageBand) {
+  return ageBand === "11-16" || ageBand === "13-16";
+}
+
+function normalizeForComparison(value) {
+  return cleanText(value)
+    .toLowerCase()
+    .replace(/[^a-z0-9\s]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
+function titleLooksTooCloseToSource(title, experimentOptions) {
+  const normalizedTitle = normalizeForComparison(title);
+  if (!normalizedTitle) return false;
+
+  return experimentOptions.some((option) => {
+    const sourceTitle = normalizeForComparison(option.title);
+    return sourceTitle && (normalizedTitle === sourceTitle || normalizedTitle.includes(sourceTitle));
+  });
+}
+
+function looksTooYoungForOlderChild(result, ageBand) {
+  if (!isOlderChildBand(ageBand)) return false;
+
+  const combinedText = normalizeForComparison(
+    `${result.title} ${result.whatToDo} ${result.script} ${result.whyItWorks}`
+  );
+
+  const tooYoungPhrases = [
+    "little kid",
+    "little one",
+    "toddler",
+    "preschool",
+    "sticker chart",
+    "star chart",
+    "toy",
+    "stuffed animal",
+    "count to three",
+    "time out",
+  ];
+
+  return tooYoungPhrases.some((phrase) => combinedText.includes(phrase));
+}
+
+function buildShortExperimentPrompt(input) {
+  const {
+    topic,
+    moment,
+    ageBand,
+    tried,
+    goal,
+    sourceCardIds,
+    experimentOptions,
+    extraGuidance,
+  } = input;
+
+  return `
+Create one tailored parenting experiment for this exact moment.
+
+Return only this JSON:
+{
+  "title": "string",
+  "whatToDo": "string",
+  "script": "string",
+  "whyItWorks": "string"
+}
+
+Rules:
+- Keep it suitable for a fast 2-minute route
+- Use the experiment options as guardrails and ingredients, not as the final answer
+- Use the parent's moment and goal as stronger signals than the source card titles
+- Do not copy a source card verbatim
+- Do not return a title that is just a source-card label rewritten minimally
+- Create a natural coaching title
+- Match the child's age band closely if available
+- Take account of what has already been tried
+- Take account of what the parent is hoping for
+- Give one small practical next step
+- Keep tone warm, direct, and useful
+- Keep every field brief
+
+Age guidance:
+- For ageBand 11-16, avoid advice framed like it is for a very young child
+- For ageBand 11-16, respect autonomy more and use calm boundaries, collaboration, and follow-through
+- Do not use toddler-style framing, sticker-chart energy, or overly controlling language for older children
+
+Goal guidance:
+- Treat the parent goal as a core constraint, not a side note
+- If the goal is "listen first time", interpret that as wanting clearer follow-through, less arguing, and a more reliable response
+- Do not frame the goal as blind obedience
+- Make the experiment help the parent move toward the goal realistically for the child's age
+
+Writing guidance:
+- The title should sound like direct coaching, not like a library card label
+- The "whatToDo" should be specific to the parent's moment
+- The script should sound natural for the age band
+- The "whyItWorks" should be short and concrete
+
+${extraGuidance ? `Extra guidance:\n- ${extraGuidance}\n` : ""}
+Parent context:
+${JSON.stringify({
+    topic,
+    moment,
+    ageBand,
+    tried,
+    goal,
+    sourceCardIds,
+    experimentOptions,
+  })}
+`.trim();
+}
+
 async function callOpenAiJson({ systemPrompt, userPrompt, fallback }) {
   if (!OPENAI_API_KEY) {
     console.warn("[AI backend] OPENAI_API_KEY is missing. Using fallback response.");
@@ -384,6 +508,120 @@ ${JSON.stringify({
   sendJson(res, 200, normalizeAppliedExperiment(aiResult, fallback.example));
 }
 
+async function handleShortExperiment(req, res) {
+  const body = await readJsonBody(req);
+
+  const topic = cleanText(body.topic);
+  const moment = cleanText(body.moment);
+  const ageBand = cleanText(body.ageBand);
+  const sourceCardIds = Array.isArray(body.sourceCardIds)
+    ? body.sourceCardIds
+        .filter((item) => typeof item === "string")
+        .map((item) => item.trim())
+        .filter(Boolean)
+        .slice(0, 3)
+    : [];
+  const tried = Array.isArray(body.tried)
+    ? body.tried.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 3)
+    : [];
+  const goal = Array.isArray(body.goal)
+    ? body.goal.filter((item) => typeof item === "string").map((item) => item.trim()).filter(Boolean).slice(0, 3)
+    : [];
+  const experimentOptions = Array.isArray(body.experimentOptions)
+    ? body.experimentOptions
+        .filter((item) => item && typeof item === "object")
+        .map((item) => ({
+          id: cleanText(item.id),
+          title: cleanText(item.title),
+          whatToDo: cleanText(item.whatToDo),
+          whyItWorks: cleanText(item.whyItWorks),
+          script: cleanText(item.script),
+          ageBands: Array.isArray(item.ageBands)
+            ? item.ageBands.filter((entry) => typeof entry === "string").slice(0, 4)
+            : [],
+          parentCapacity: Array.isArray(item.parentCapacity)
+            ? item.parentCapacity.filter((entry) => typeof entry === "string").slice(0, 3)
+            : [],
+          goals: Array.isArray(item.goals)
+            ? item.goals.filter((entry) => typeof entry === "string").slice(0, 4)
+            : [],
+          tags: Array.isArray(item.tags)
+            ? item.tags.filter((entry) => typeof entry === "string").slice(0, 5)
+            : [],
+        }))
+        .filter((item) => item.title && item.whatToDo)
+        .slice(0, 3)
+    : [];
+
+  const firstOption = experimentOptions[0] || {};
+
+  const fallback = {
+    title: firstOption.title || "One small calm step",
+    whatToDo:
+      firstOption.whatToDo ||
+      "Pick one small next step, keep your words brief, and stay steady.",
+    script:
+      firstOption.script ||
+      "I'm keeping this simple. Here's the next step.",
+    whyItWorks:
+      firstOption.whyItWorks ||
+      "A smaller, steadier response is often easier for both of you to follow.",
+  };
+
+  const systemPrompt =
+    "You are a calm parenting coach helping a parent in a very short 2-minute route. Return strict JSON only. Use the library experiments as source material and safety guardrails, not as text to copy directly. Give one small, safe, concrete experiment. Be specific, emotionally attuned, and brief. Avoid generic advice, long explanations, multiple suggestions, vague reassurance without action, or simply echoing a source-card title.";
+
+  const firstPass = normalizeShortExperiment(
+    await callOpenAiJson({
+      systemPrompt,
+      userPrompt: buildShortExperimentPrompt({
+        topic,
+        moment,
+        ageBand,
+        tried,
+        goal,
+        sourceCardIds,
+        experimentOptions,
+      }),
+      fallback,
+    }),
+    fallback
+  );
+
+  const shouldRetry =
+    titleLooksTooCloseToSource(firstPass.title, experimentOptions) ||
+    looksTooYoungForOlderChild(firstPass, ageBand);
+
+  if (!shouldRetry) {
+    sendJson(res, 200, firstPass);
+    return;
+  }
+
+  const retryReason = looksTooYoungForOlderChild(firstPass, ageBand)
+    ? "The first draft sounded too young for this age band. Rewrite it to sound appropriate for an older child or teenager while keeping it brief and practical."
+    : "The first draft title stayed too close to the source-card wording. Rewrite it so it sounds like natural coaching, not a reused library label.";
+
+  const secondPass = normalizeShortExperiment(
+    await callOpenAiJson({
+      systemPrompt,
+      userPrompt: buildShortExperimentPrompt({
+        topic,
+        moment,
+        ageBand,
+        tried,
+        goal,
+        sourceCardIds,
+        experimentOptions,
+        extraGuidance: retryReason,
+      }),
+      fallback: firstPass,
+    }),
+    firstPass
+  );
+
+  sendJson(res, 200, secondPass);
+}
+
 const server = http.createServer(async (req, res) => {
   try {
     if (req.method === "OPTIONS") {
@@ -435,6 +673,13 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
+    if (req.method === "POST" && req.url === "/api/ai/short-experiment") {
+      console.log("[AI backend] /api/ai/short-experiment");
+      await handleShortExperiment(req, res);
+      return;
+    }
+
+    console.warn(`[AI backend] 404 ${req.method} ${req.url}`);
     sendJson(res, 404, { error: "Not found." });
   } catch (error) {
     sendJson(res, 500, {

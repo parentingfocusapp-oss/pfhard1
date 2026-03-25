@@ -2,6 +2,7 @@ import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
 import { Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 const introText =
@@ -10,7 +11,10 @@ const focusText =
   "For now, think of just one situation that has kept on coming up recently.";
 
 export default function FocusScreen() {
-  const { duration } = useLocalSearchParams<{ duration?: DurationOption }>();
+  const { duration, ageBand } = useLocalSearchParams<{
+    duration?: DurationOption;
+    ageBand?: AgeBand;
+  }>();
 
   const [introLength, setIntroLength] = useState(0);
   const [focusLength, setFocusLength] = useState(0);
@@ -65,6 +69,7 @@ export default function FocusScreen() {
       pathname: duration === "10" ? "/deepdive" : "/topic",
       params: {
         duration: duration || "2",
+        ageBand: ageBand || "",
       },
     });
   }

@@ -1,17 +1,18 @@
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Button, Pressable, ScrollView, Text, View } from "react-native";
+import { Button, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import {
-  getBackendDebugSource,
   getAppliedExperimentExample,
+  getTailoredShortExperiment,
 } from "../lib/ai/client";
 import {
   FollowupMode,
   getBestScriptVariants,
   getExperimentCardById,
-  getExperimentList,
+  getExperimentSelection,
   getSelectedExperimentIndex,
+  toShortExperimentSource,
 } from "../lib/experiments";
 import { sessionRepository } from "../lib/storage";
 import { CapacityLevel, ExperimentCard, ScriptVariant } from "../types/experiment";
@@ -44,6 +45,14 @@ type Choice =
       card: ExperimentCard;
       primaryVariant: ScriptVariant | null;
     };
+
+type DisplayExperiment = {
+  title: string;
+  whatToDo: string;
+  script?: string;
+  whyItWorks: string;
+  source: "ai" | "library";
+};
 
 function formatCapacityLabel(level?: CapacityLevel) {
   if (!level) return undefined;
@@ -134,7 +143,22 @@ export default function ExperimentScreen() {
     experimentId?: string;
     quadrant?: string;
     suggestedDirection?: string;
+    tried?: string;
+    goal?: string;
   }>();
+
+  function parseStringArray(value?: string) {
+    if (!value) return [];
+
+    try {
+      const parsed = JSON.parse(value);
+      return Array.isArray(parsed)
+        ? parsed.filter((item): item is string => typeof item === "string")
+        : [];
+    } catch {
+      return [];
+    }
+  }
 
   const topic = params.topic;
   const moment = params.moment;
@@ -154,33 +178,34 @@ export default function ExperimentScreen() {
   const experimentId = params.experimentId;
   const quadrant = params.quadrant;
   const suggestedDirection = params.suggestedDirection;
+  const tried = useMemo(() => parseStringArray(params.tried), [params.tried]);
+  const goal = useMemo(() => parseStringArray(params.goal), [params.goal]);
+  const goals = goal;
+  const tags = useMemo(() => {
+    const triedTagMap: Record<string, string[]> = {
+      "Repeating reminders": ["script", "routine"],
+      Explaining: ["connection"],
+      Consequences: ["structure", "follow-through"],
+      "Staying calm": ["connection", "small-step"],
+      "Nothing yet": [],
+    };
+
+    return [...new Set(tried.flatMap((label) => triedTagMap[label] || []))];
+  }, [tried]);
 
   const [previousSession, setPreviousSession] = useState<StoredSession | null>(
     null
   );
   const [isLoadingPrevious, setIsLoadingPrevious] = useState(true);
-  const [aiBadgeLabel, setAiBadgeLabel] = useState("AI fallback");
   const [isApplyingExample, setIsApplyingExample] = useState(false);
   const [appliedExample, setAppliedExample] = useState<string | null>(null);
   const [appliedExampleSource, setAppliedExampleSource] = useState<
     "backend" | "fallback" | null
   >(null);
-  const [showSecondaryScripts, setShowSecondaryScripts] = useState(false);
-
-  useEffect(() => {
-    async function loadAiBadge() {
-      const source = await getBackendDebugSource();
-
-      if (!source || !source.openAiConfigured) {
-        setAiBadgeLabel("AI fallback");
-        return;
-      }
-
-      setAiBadgeLabel(`AI ${source.model}`);
-    }
-
-    void loadAiBadge();
-  }, []);
+  const [isLoadingTailoredExperiment, setIsLoadingTailoredExperiment] = useState(true);
+  const [tailoredExperiment, setTailoredExperiment] = useState<DisplayExperiment | null>(
+    null
+  );
 
   useEffect(() => {
     async function loadPreviousSession() {
@@ -201,21 +226,40 @@ export default function ExperimentScreen() {
     void loadPreviousSession();
   }, [sessionId]);
 
-  const rankedExperiments = getExperimentList({
-    topic,
-    moment,
-    balance,
-    warmthLevel:
-      warmth === "low" || warmth === "medium" || warmth === "high"
-        ? warmth
-        : undefined,
-    structureLevel:
-      structure === "low" || structure === "medium" || structure === "high"
-        ? structure
-        : undefined,
-    ageBand,
-    parentCapacity,
-  });
+  const experimentSelection = useMemo(
+    () =>
+      getExperimentSelection({
+        topic,
+        moment,
+        balance,
+        warmthLevel:
+          warmth === "low" || warmth === "medium" || warmth === "high"
+            ? warmth
+            : undefined,
+        structureLevel:
+          structure === "low" || structure === "medium" || structure === "high"
+            ? structure
+            : undefined,
+        goals,
+        tags,
+        ageBand,
+        parentCapacity,
+      }),
+    [
+      ageBand,
+      balance,
+      goals,
+      moment,
+      parentCapacity,
+      structure,
+      tags,
+      topic,
+      warmth,
+    ]
+  );
+
+  const rankedExperiments = experimentSelection.experiments;
+  const matchStrength = experimentSelection.matchStrength;
 
   const experiments = useMemo(() => {
     if (!experimentId) {
@@ -299,10 +343,37 @@ export default function ExperimentScreen() {
 
   const selectedChoice = choices[selectedChoiceIndex];
   const hasAlternativeChoices = choices.length > 1;
+  const selectedLibraryChoice = selectedChoice?.kind === "library" ? selectedChoice : null;
+  const selectedLibraryChoiceId = selectedLibraryChoice?.id;
+  const selectedLibraryCard = useMemo(
+    () =>
+      selectedLibraryChoiceId
+        ? experiments.find((card) => card.id === selectedLibraryChoiceId) || null
+        : null,
+    [experiments, selectedLibraryChoiceId]
+  );
+  const sourceCards = useMemo(() => {
+    const preferredCards = selectedLibraryCard
+      ? [
+          selectedLibraryCard,
+          ...experiments.filter((card) => card.id !== selectedLibraryCard.id),
+        ]
+      : experiments;
 
-  useEffect(() => {
-    setShowSecondaryScripts(false);
-  }, [selectedChoiceIndex]);
+    return preferredCards.slice(0, 3);
+  }, [experiments, selectedLibraryCard]);
+  const sourceCardIds = useMemo(
+    () => sourceCards.map((card) => card.id),
+    [sourceCards]
+  );
+  const sourceCardsKey = sourceCardIds.join("|");
+  const shortExperimentOptions = useMemo(
+    () =>
+      sourceCards.map((card) =>
+        toShortExperimentSource(card, { ageBand, parentCapacity })
+      ),
+    [ageBand, parentCapacity, sourceCards]
+  );
 
   const heading =
     followupMode === "build"
@@ -312,12 +383,88 @@ export default function ExperimentScreen() {
       : experimentId
       ? "Experiment"
       : "Choose one experiment";
-  const growthHint =
-    structure === "low"
-      ? "This adds a bit more structure than your usual pattern."
-      : warmth === "low"
-      ? "This leans slightly more on connection."
-      : null;
+  const introText =
+    tailoredExperiment?.source === "library" || matchStrength === "fallback"
+      ? "Here's a simple place to start."
+      : "Here's one small thing to try.";
+  const fallbackExperiment = useMemo<DisplayExperiment | null>(() => {
+    if (!selectedChoice) {
+      return null;
+    }
+
+    return {
+      title: selectedChoice.title,
+      whatToDo: selectedChoice.action,
+      script: selectedChoice.primaryScript,
+      whyItWorks: selectedChoice.why,
+      source: "library",
+    };
+  }, [selectedChoice]);
+  const displayExperiment =
+    tailoredExperiment || (!isLoadingTailoredExperiment ? fallbackExperiment : null);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadTailoredExperiment() {
+      setIsLoadingTailoredExperiment(true);
+      setTailoredExperiment(null);
+
+      if (!sourceCards.length) {
+        console.log("[Experiment] Short-route AI skipped: no source cards.");
+        setIsLoadingTailoredExperiment(false);
+        return;
+      }
+
+      console.log("[Experiment] Short-route AI request", {
+        topic,
+        moment: rawMoment || moment,
+        ageBand,
+        sourceCardIds,
+      });
+
+      const result = await getTailoredShortExperiment({
+        ageBand,
+        topic,
+        moment: rawMoment || moment,
+        tried,
+        goal,
+        experimentOptions: shortExperimentOptions,
+      });
+
+      if (!isActive) return;
+
+      console.log("[Experiment] Short-route AI result", {
+        source: result.source,
+        title: result.title,
+      });
+      setTailoredExperiment({
+        title: result.title,
+        whatToDo: result.whatToDo,
+        script: result.script,
+        whyItWorks: result.whyItWorks,
+        source: result.source === "backend" ? "ai" : "library",
+      });
+      setIsLoadingTailoredExperiment(false);
+    }
+
+    void loadTailoredExperiment();
+
+    return () => {
+      isActive = false;
+    };
+  }, [
+    ageBand,
+    goal,
+    moment,
+    rawMoment,
+    sourceCardIds,
+    sourceCards.length,
+    sourceCardsKey,
+    shortExperimentOptions,
+    topic,
+    tried,
+  ]);
 
   if (isLoadingPrevious) {
     return (
@@ -353,24 +500,35 @@ export default function ExperimentScreen() {
         </Text>
       ) : null}
 
-      <View
-        style={{
-          alignSelf: "flex-start",
-          borderWidth: 1,
-          borderColor: WarmTheme.border,
-          borderRadius: 999,
-          paddingHorizontal: 10,
-          paddingVertical: 4,
-          marginBottom: 16,
-          backgroundColor: WarmTheme.surface,
-        }}
-      >
-        <Text style={{ color: WarmTheme.mutedText, fontSize: 12, fontWeight: "600" }}>
-          {aiBadgeLabel}
-        </Text>
-      </View>
+      {isLoadingTailoredExperiment ? (
+        <View
+          style={{
+            borderWidth: 1,
+            borderColor: WarmTheme.border,
+            borderRadius: 16,
+            padding: 18,
+            marginBottom: 20,
+            backgroundColor: WarmTheme.surfaceAlt,
+          }}
+        >
+          <Text
+            style={{
+              fontSize: 22,
+              fontWeight: "700",
+              lineHeight: 30,
+              marginBottom: 12,
+              color: WarmTheme.text,
+            }}
+          >
+            Finding a good fit
+          </Text>
+          <Text style={{ color: WarmTheme.mutedText }}>
+            Pulling together one small thing to try.
+          </Text>
+        </View>
+      ) : null}
 
-      {selectedChoice ? (
+      {displayExperiment ? (
         <View
           style={{
             borderWidth: 1,
@@ -389,14 +547,8 @@ export default function ExperimentScreen() {
               color: WarmTheme.accent,
             }}
           >
-            {selectedChoice.kind === "library" ? "Suggested experiment" : "Your idea"}
+            Suggested experiment
           </Text>
-
-          {selectedChoice.capacityLabel ? (
-            <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
-              {selectedChoice.capacityLabel}
-            </Text>
-          ) : null}
 
           <Text
             style={{
@@ -407,14 +559,27 @@ export default function ExperimentScreen() {
               color: WarmTheme.text,
             }}
           >
-            {selectedChoice.title}
+            {displayExperiment.title}
+          </Text>
+
+          <Text style={{ marginBottom: 8, color: WarmTheme.mutedText }}>{introText}</Text>
+
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              marginBottom: 6,
+              color: WarmTheme.accent,
+            }}
+          >
+            What to do
           </Text>
 
           <Text style={{ marginBottom: 12, color: WarmTheme.text }}>
-            {selectedChoice.action}
+            {displayExperiment.whatToDo}
           </Text>
 
-          {selectedChoice.primaryScript ? (
+          {displayExperiment.script ? (
             <View
               style={{
                 borderWidth: 1,
@@ -428,70 +593,31 @@ export default function ExperimentScreen() {
               <Text
                 style={{
                   marginBottom: 8,
-                  color: WarmTheme.mutedText,
+                  color: WarmTheme.accent,
                   fontSize: 12,
-                  fontWeight: "600",
+                  fontWeight: "700",
                 }}
               >
-                Example
+                What to say
               </Text>
-              <Text style={{ color: WarmTheme.text }}>{selectedChoice.primaryScript}</Text>
+              <Text style={{ color: WarmTheme.text }}>{displayExperiment.script}</Text>
             </View>
           ) : null}
 
-          {growthHint ? (
-            <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
-              {growthHint}
-            </Text>
-          ) : null}
-
-          <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
-            Why this might help: {selectedChoice.why}
+          <Text
+            style={{
+              fontSize: 12,
+              fontWeight: "700",
+              marginBottom: 6,
+              color: WarmTheme.accent,
+            }}
+          >
+            Why it may help
           </Text>
 
-          {selectedChoice.lowCapacityTip ? (
-            <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
-              Low-energy tip: {selectedChoice.lowCapacityTip}
-            </Text>
-          ) : null}
-
-          {selectedChoice.secondaryScripts?.length ? (
-            <View style={{ marginBottom: 10 }}>
-              <Pressable
-                onPress={() => setShowSecondaryScripts((current) => !current)}
-                style={{
-                  alignSelf: "flex-start",
-                  borderRadius: 999,
-                  paddingHorizontal: 12,
-                  paddingVertical: 8,
-                  backgroundColor: WarmTheme.surface,
-                  borderWidth: 1,
-                  borderColor: WarmTheme.border,
-                }}
-              >
-                <Text style={{ color: WarmTheme.text, fontWeight: "600" }}>
-                  {showSecondaryScripts ? "Hide more ways to say it" : "Show more ways to say it"}
-                </Text>
-              </Pressable>
-
-              {showSecondaryScripts
-                ? selectedChoice.secondaryScripts.map((script, index) => (
-                    <Text
-                      key={`${selectedChoice.id || selectedChoice.title}-script-${index}`}
-                      style={{ marginTop: 10, color: WarmTheme.text }}
-                    >
-                      {script}
-                    </Text>
-                  ))
-                : null}
-            </View>
-          ) : null}
-
-          {selectedChoice.commonMistake ? (
-            <Text style={{ color: WarmTheme.mutedText }}>
-              Common mistake: {selectedChoice.commonMistake}
-            </Text>
-          ) : null}
+          <Text style={{ color: WarmTheme.mutedText }}>
+            {displayExperiment.whyItWorks}
+          </Text>
 
           {appliedExample ? (
             <View
@@ -538,28 +664,12 @@ export default function ExperimentScreen() {
             </View>
           ) : null}
         </View>
-      ) : (
-        <View
-          style={{
-            borderWidth: 1,
-            borderColor: WarmTheme.border,
-            borderRadius: 12,
-            padding: 16,
-            marginBottom: 20,
-            backgroundColor: WarmTheme.surface,
-          }}
-        >
-          <Text style={{ color: WarmTheme.text }}>
-            No suggestions are available right now, so go back and describe the
-            moment a little differently.
-          </Text>
-        </View>
-      )}
+      ) : null}
 
       <Button
         title="I will try this"
         onPress={() => {
-          if (!selectedChoice) return;
+          if (!displayExperiment || !selectedChoice) return;
 
           router.push({
             pathname: "/will",
@@ -573,15 +683,17 @@ export default function ExperimentScreen() {
               profileQuadrant: quadrant || "",
               suggestedDirection: suggestedDirection || "",
               experimentId: selectedChoice.kind === "library" ? selectedChoice.id : "",
-              experimentTitle: selectedChoice.title,
-              experimentAction: selectedChoice.action,
-              experimentWhy: selectedChoice.why,
+              experimentTitle: displayExperiment.title,
+              experimentAction: displayExperiment.whatToDo,
+              experimentWhy: displayExperiment.whyItWorks,
               index: String(selectedChoiceIndex),
               duration: duration || "",
+              tried: JSON.stringify(tried),
+              goal: JSON.stringify(goal),
             },
           });
         }}
-        disabled={!selectedChoice}
+        disabled={!selectedChoice || isLoadingTailoredExperiment || !displayExperiment}
       />
 
       <View style={{ height: 12 }} />
@@ -593,7 +705,7 @@ export default function ExperimentScreen() {
             : "I like the sound of this but don't see how to use it yet"
         }
         onPress={() => {
-          if (!selectedChoice) return;
+          if (!displayExperiment) return;
 
           void (async () => {
             setIsApplyingExample(true);
@@ -602,9 +714,9 @@ export default function ExperimentScreen() {
               topic,
               moment,
               rawMoment,
-              experimentTitle: selectedChoice.title,
-              experimentAction: selectedChoice.action,
-              experimentWhy: selectedChoice.why,
+              experimentTitle: displayExperiment.title,
+              experimentAction: displayExperiment.whatToDo,
+              experimentWhy: displayExperiment.whyItWorks,
             });
 
             setAppliedExample(result.example);
@@ -612,7 +724,7 @@ export default function ExperimentScreen() {
             setIsApplyingExample(false);
           })();
         }}
-        disabled={!selectedChoice || isApplyingExample}
+        disabled={!displayExperiment || isApplyingExample || isLoadingTailoredExperiment}
       />
 
       <View style={{ height: 12 }} />
@@ -644,6 +756,8 @@ export default function ExperimentScreen() {
               ageBand: ageBand || "",
               parentCapacity: parentCapacity || "",
               sessionId: sessionId || "",
+              tried: JSON.stringify(tried),
+              goal: JSON.stringify(goal),
             },
           });
         }}

@@ -3,12 +3,14 @@ import { useMemo, useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { structureScenarios } from "../lib/deepdive";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 export default function StructureScreen() {
-  const { warmthSelections, duration } = useLocalSearchParams<{
+  const { warmthSelections, duration, ageBand } = useLocalSearchParams<{
     warmthSelections?: string;
     duration?: DurationOption;
+    ageBand?: AgeBand;
   }>();
   const [selected, setSelected] = useState<Record<string, string>>({});
 
@@ -103,6 +105,7 @@ export default function StructureScreen() {
             pathname: "/deepdive-feedback",
             params: {
               duration: duration || "10",
+              ageBand: ageBand || "",
               warmthSelections: JSON.stringify(parsedWarmthSelections),
               structureSelections: JSON.stringify(Object.values(selected)),
             },

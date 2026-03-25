@@ -3,10 +3,14 @@ import { useState } from "react";
 import { Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { warmthScenarios } from "../lib/deepdive";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 export default function WarmthScreen() {
-  const { duration } = useLocalSearchParams<{ duration?: DurationOption }>();
+  const { duration, ageBand } = useLocalSearchParams<{
+    duration?: DurationOption;
+    ageBand?: AgeBand;
+  }>();
   const [selected, setSelected] = useState<Record<string, string>>({});
 
   const allSelected = warmthScenarios.every((scenario) => selected[scenario.id]);
@@ -87,6 +91,7 @@ export default function WarmthScreen() {
             pathname: "/structure",
             params: {
               duration: duration || "10",
+              ageBand: ageBand || "",
               warmthSelections: JSON.stringify(Object.values(selected)),
             },
           });

@@ -11,16 +11,18 @@ import {
 } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { goalSuggestions } from "../lib/deepdive";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 export default function DeepDiveGoalScreen() {
-  const { warmth, structure, quadrant, suggestedDirection, duration } =
+  const { warmth, structure, quadrant, suggestedDirection, duration, ageBand } =
     useLocalSearchParams<{
       warmth?: string;
       structure?: string;
       quadrant?: string;
       suggestedDirection?: string;
       duration?: DurationOption;
+      ageBand?: AgeBand;
     }>();
 
   const [goal, setGoal] = useState("");
@@ -34,6 +36,7 @@ export default function DeepDiveGoalScreen() {
       pathname: "/topic",
       params: {
         duration: duration || "10",
+        ageBand: ageBand || "",
         routeType: "deepdive",
         balance: nextGoal,
         warmth: warmth || "",

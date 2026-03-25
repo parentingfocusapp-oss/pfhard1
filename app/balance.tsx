@@ -12,6 +12,7 @@ import {
 import { WarmTheme } from "../constants/warmTheme";
 import { generateBlendedOptions } from "../lib/deepdive";
 import { ParentingProfile } from "../types/deepdive";
+import { AgeBand } from "../types/experiment";
 import { DurationOption } from "../types/session";
 
 const MAX_IDEAS = 3;
@@ -29,6 +30,7 @@ export default function BalanceScreen() {
     quadrant,
     suggestedDirection,
     duration,
+    ageBand,
   } = useLocalSearchParams<{
     topic?: string;
     moment?: string;
@@ -40,6 +42,7 @@ export default function BalanceScreen() {
     quadrant?: string;
     suggestedDirection?: string;
     duration?: DurationOption;
+    ageBand?: AgeBand;
   }>();
 
   const [currentIdea, setCurrentIdea] = useState("");
@@ -92,6 +95,7 @@ export default function BalanceScreen() {
           quadrant: profile.quadrant,
           suggestedDirection: profile.suggestedDirection,
           duration: duration || "10",
+          ageBand: ageBand || "",
           parentOptions: JSON.stringify(useIdeas),
           generatedOptions: JSON.stringify(
             generated.map(({ experimentCard, ...option }) => option)

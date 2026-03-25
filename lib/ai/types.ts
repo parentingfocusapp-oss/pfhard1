@@ -31,3 +31,24 @@ export type InterpretedMoment = {
   summary: string;
   themes: string[];
 };
+
+export type ShortExperimentSource = ExperimentAIPayload & {
+  script?: string;
+  tags?: string[];
+};
+
+export type ShortExperimentRequest = {
+  ageBand?: string;
+  topic?: string;
+  moment?: string;
+  tried?: string[];
+  goal?: string[];
+  experimentOptions: ShortExperimentSource[];
+};
+
+export type ShortExperimentResponse = {
+  title: string;
+  whatToDo: string;
+  script: string;
+  whyItWorks: string;
+};
