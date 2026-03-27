@@ -41,8 +41,11 @@ export type ShortExperimentRequest = {
   ageBand?: string;
   topic?: string;
   moment?: string;
+  momentNormalized?: string;
   tried?: string[];
+  triedTags?: string[];
   goal?: string[];
+  goalNormalized?: string[];
   experimentOptions: ShortExperimentSource[];
 };
 

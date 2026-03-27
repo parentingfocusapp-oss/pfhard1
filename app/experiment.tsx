@@ -97,6 +97,137 @@ function buildParentIdeaExampleText(action: string) {
   return "For example: make the idea a little smaller and a little clearer before you try it.";
 }
 
+function normalizeText(value?: string) {
+  return value?.trim().toLowerCase() || "";
+}
+
+function normalizeMomentForShortExperiment(params: {
+  topic?: string;
+  moment?: string;
+  rawMoment?: string;
+}) {
+  const source = params.rawMoment?.trim() || params.moment?.trim() || "";
+  const normalized = normalizeText(source);
+  const topic = normalizeText(params.topic);
+
+  if (!normalized) return undefined;
+
+  if (
+    normalized.includes("argu") ||
+    normalized.includes("back and forth") ||
+    normalized.includes("battle")
+  ) {
+    return "back-and-forth conflict in this repeated moment";
+  }
+
+  if (
+    normalized.includes("won't") ||
+    normalized.includes("will not") ||
+    normalized.includes("refus") ||
+    normalized.includes("no ") ||
+    normalized.includes("doesn't") ||
+    normalized.includes("not ")
+  ) {
+    return "slow or resistant response to the first instruction in this moment";
+  }
+
+  if (
+    normalized.includes("shout") ||
+    normalized.includes("yell") ||
+    normalized.includes("scream") ||
+    normalized.includes("meltdown")
+  ) {
+    return "quick escalation and raised emotion in this moment";
+  }
+
+  if (
+    normalized.includes("stall") ||
+    normalized.includes("delay") ||
+    normalized.includes("dawdle") ||
+    normalized.includes("dragging") ||
+    normalized.includes("slow")
+  ) {
+    return "slow start with repeated prompting in this moment";
+  }
+
+  if (topic.includes("screen")) {
+    return "difficulty stopping screen time and moving to the next step";
+  }
+
+  if (topic.includes("bed")) {
+    return "resistance and delay around settling into bedtime";
+  }
+
+  if (topic.includes("morning")) {
+    return "slow transitions and repeated prompting in the morning routine";
+  }
+
+  if (topic.includes("homework")) {
+    return "resistance or slow start around homework";
+  }
+
+  return source;
+}
+
+function getTriedTags(tried: string[]) {
+  const tags = new Set<string>();
+
+  tried.forEach((label) => {
+    const normalized = normalizeText(label);
+
+    if (!normalized || normalized === "nothing yet") return;
+    if (normalized.includes("reminder")) tags.add("repeated-reminders");
+    if (normalized.includes("explain")) tags.add("extra-explaining");
+    if (normalized.includes("consequence")) tags.add("consequences");
+    if (normalized.includes("calm")) tags.add("staying-calm");
+    if (normalized.includes("shout") || normalized.includes("yell")) tags.add("shouting");
+    if (normalized.includes("device") || normalized.includes("screen")) tags.add("device-removal");
+    if (normalized.includes("take") && normalized.includes("away")) {
+      tags.add("removal-tactic");
+    }
+  });
+
+  return [...tags];
+}
+
+function normalizeGoalLabels(goal: string[]) {
+  return goal
+    .map((label) => {
+      const normalized = normalizeText(label);
+
+      if (normalized === "listen first time") {
+        return "faster response to the first instruction without repeated prompting";
+      }
+
+      if (normalized === "less arguing") {
+        return "less back-and-forth and quicker cooperation";
+      }
+
+      if (normalized === "stay calm") {
+        return "calmer response with less escalation in the hard moment";
+      }
+
+      if (normalized === "more independence") {
+        return "more independent follow-through with less parent prompting";
+      }
+
+      if (normalized === "less shouting") {
+        return "calmer transition with less escalation";
+      }
+
+      if (normalized === "do it without an argument") {
+        return "more cooperation with less escalation";
+      }
+
+      return label.trim();
+    })
+    .filter(Boolean);
+}
+
+function shouldUseNormalizedBehaviourHints(ageBand?: ExperimentCard["ageBands"][number]) {
+  return ageBand !== "11-16";
+}
+
 function buildLibraryChoice(
   card: ExperimentCard,
   params: {
@@ -121,6 +252,43 @@ function buildLibraryChoice(
     card,
     primaryVariant: primary,
   };
+}
+
+function getCardStrategySignals(card: ExperimentCard) {
+  return new Set((card.tags || []).slice(0, 5));
+}
+
+function buildDiverseSourceCards(cards: ExperimentCard[], limit = 3) {
+  if (cards.length <= 1) {
+    return cards.slice(0, limit);
+  }
+
+  const selected: ExperimentCard[] = [cards[0]];
+  const usedSignals = getCardStrategySignals(cards[0]);
+  const remaining = cards.slice(1);
+
+  while (selected.length < limit && remaining.length > 0) {
+    let bestIndex = 0;
+    let bestScore = Number.NEGATIVE_INFINITY;
+
+    remaining.forEach((card, index) => {
+      const signals = getCardStrategySignals(card);
+      const overlap = [...signals].filter((signal) => usedSignals.has(signal)).length;
+      const diversityScore = signals.size - overlap;
+
+      if (diversityScore > bestScore) {
+        bestScore = diversityScore;
+        bestIndex = index;
+      }
+    });
+
+    const [nextCard] = remaining.splice(bestIndex, 1);
+    selected.push(nextCard);
+
+    getCardStrategySignals(nextCard).forEach((signal) => usedSignals.add(signal));
+  }
+
+  return selected;
 }
 
 export default function ExperimentScreen() {
@@ -181,6 +349,22 @@ export default function ExperimentScreen() {
   const tried = useMemo(() => parseStringArray(params.tried), [params.tried]);
   const goal = useMemo(() => parseStringArray(params.goal), [params.goal]);
   const goals = goal;
+  const useNormalizedHints = useMemo(
+    () => shouldUseNormalizedBehaviourHints(ageBand),
+    [ageBand]
+  );
+  const momentNormalized = useMemo(
+    () =>
+      useNormalizedHints
+        ? normalizeMomentForShortExperiment({ topic, moment, rawMoment })
+        : undefined,
+    [moment, rawMoment, topic, useNormalizedHints]
+  );
+  const triedTags = useMemo(() => getTriedTags(tried), [tried]);
+  const goalNormalized = useMemo(
+    () => (useNormalizedHints ? normalizeGoalLabels(goal) : []),
+    [goal, useNormalizedHints]
+  );
   const tags = useMemo(() => {
     const triedTagMap: Record<string, string[]> = {
       "Repeating reminders": ["script", "routine"],
@@ -360,7 +544,7 @@ export default function ExperimentScreen() {
         ]
       : experiments;
 
-    return preferredCards.slice(0, 3);
+    return buildDiverseSourceCards(preferredCards, 3);
   }, [experiments, selectedLibraryCard]);
   const sourceCardIds = useMemo(
     () => sourceCards.map((card) => card.id),
@@ -427,8 +611,11 @@ export default function ExperimentScreen() {
         ageBand,
         topic,
         moment: rawMoment || moment,
+        momentNormalized,
         tried,
+        triedTags,
         goal,
+        goalNormalized,
         experimentOptions: shortExperimentOptions,
       });
 
@@ -456,7 +643,9 @@ export default function ExperimentScreen() {
   }, [
     ageBand,
     goal,
+    goalNormalized,
     moment,
+    momentNormalized,
     rawMoment,
     sourceCardIds,
     sourceCards.length,
@@ -464,6 +653,7 @@ export default function ExperimentScreen() {
     shortExperimentOptions,
     topic,
     tried,
+    triedTags,
   ]);
 
   if (isLoadingPrevious) {
