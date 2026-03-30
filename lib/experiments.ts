@@ -3,6 +3,7 @@ import {
   getDeepDiveExperimentCards,
   getExperimentCards,
 } from "../data/experiments";
+import { getOfficialExperimentCards } from "./officialguid-adapter";
 import {
   AgeBand,
   CapacityLevel,
@@ -15,6 +16,7 @@ import { ShortExperimentSource } from "./ai/types";
 
 export type FollowupMode = "build" | "alternative";
 export type MatchStrength = "strong" | "fallback";
+type ExperimentLibraryMode = "legacy" | "official" | "merged";
 
 type ExperimentMatchParams = {
   topic?: string;
@@ -32,6 +34,8 @@ type ScriptSelectionParams = {
   ageBand?: AgeBand;
   parentCapacity?: CapacityLevel;
 };
+
+const ACTIVE_EXPERIMENT_LIBRARY: ExperimentLibraryMode = "official";
 
 const ageBandOverlapMap: Record<AgeBand, AgeBand[]> = {
   "2-3": ["2-3"],
@@ -90,6 +94,40 @@ function scoreCard(card: ExperimentCard, params: ExperimentMatchParams) {
   return score;
 }
 
+function matchesTopicAndMoment(card: ExperimentCard, topic: string, moment: string) {
+  return card.topic === topic && card.moments.includes(moment);
+}
+
+function getOfficialTopicMomentCards(topic: string, moment: string) {
+  return getOfficialExperimentCards().filter((card) =>
+    matchesTopicAndMoment(card, topic, moment)
+  );
+}
+
+function getAllShortRouteCards() {
+  if (ACTIVE_EXPERIMENT_LIBRARY === "legacy") {
+    return getAllExperimentCards();
+  }
+
+  if (ACTIVE_EXPERIMENT_LIBRARY === "official") {
+    return getOfficialExperimentCards();
+  }
+
+  return [...getAllExperimentCards(), ...getOfficialExperimentCards()];
+}
+
+function getTopicMomentCards(topic: string, moment: string) {
+  if (ACTIVE_EXPERIMENT_LIBRARY === "legacy") {
+    return getExperimentCards(topic, moment);
+  }
+
+  if (ACTIVE_EXPERIMENT_LIBRARY === "official") {
+    return getOfficialTopicMomentCards(topic, moment);
+  }
+
+  return [...getExperimentCards(topic, moment), ...getOfficialTopicMomentCards(topic, moment)];
+}
+
 export function getMatchingExperimentCards(
   params: ExperimentMatchParams
 ): ExperimentCard[] {
@@ -98,10 +136,10 @@ export function getMatchingExperimentCards(
 
   const baseCards =
     topic && moment
-      ? getExperimentCards(topic, moment)
+      ? getTopicMomentCards(topic, moment)
       : balance
       ? getDeepDiveExperimentCards(balance)
-      : getAllExperimentCards();
+      : getAllShortRouteCards();
 
   return baseCards.filter((card) => {
     if (goals?.length && !goals.some((goal) => card.goals?.includes(goal))) {
@@ -209,7 +247,9 @@ export function getBestScriptVariants(
 }
 
 export function getExperimentCardById(id: string): ExperimentCard | undefined {
-  return getAllExperimentCards().find((card) => card.id === id);
+  return [...getAllExperimentCards(), ...getOfficialExperimentCards()].find(
+    (card) => card.id === id
+  );
 }
 
 export function toExperimentAIPayload(card: ExperimentCard): ExperimentAIPayload {
@@ -244,7 +284,7 @@ export function getExperimentList(params: ExperimentMatchParams): ExperimentCard
 function getTopicFallbackCards(params: ExperimentMatchParams) {
   if (!params.topic) return [];
 
-  const allCards = getAllExperimentCards().filter((card) => card.topic === params.topic);
+  const allCards = getAllShortRouteCards().filter((card) => card.topic === params.topic);
 
   const ageFiltered = params.ageBand
     ? allCards.filter((card) => ageBandMatches(params.ageBand, card.ageBands))
@@ -262,7 +302,7 @@ function getTopicFallbackCards(params: ExperimentMatchParams) {
 }
 
 function getUniversalFallbackCards(params: ExperimentMatchParams) {
-  const allCards = getAllExperimentCards();
+  const allCards = getAllShortRouteCards();
   const ageFiltered = params.ageBand
     ? allCards.filter((card) => ageBandMatches(params.ageBand, card.ageBands))
     : allCards;
@@ -276,9 +316,22 @@ export function getExperimentSelection(params: ExperimentMatchParams): {
   experiments: ExperimentCard[];
   matchStrength: MatchStrength;
 } {
+  console.log("[ExperimentLibrary] mode=%s", ACTIVE_EXPERIMENT_LIBRARY);
+
   const strongMatches = rankExperimentCards(getMatchingExperimentCards(params), params);
 
   if (strongMatches.length > 0) {
+    console.log(
+      "[ExperimentSelection] topic=%s moment=%s ageBand=%s fallback=%s cards=%s",
+      params.topic || "-",
+      params.moment || params.balance || "-",
+      params.ageBand || "-",
+      "no",
+      strongMatches
+        .slice(0, 3)
+        .map((card) => `${card.id}:${card.title}`)
+        .join(" | ")
+    );
     return {
       experiments: strongMatches,
       matchStrength: "strong",
@@ -298,6 +351,17 @@ export function getExperimentSelection(params: ExperimentMatchParams): {
   const closeMatches = rankExperimentCards(getMatchingExperimentCards(relaxedParams), relaxedParams);
 
   if (closeMatches.length > 0) {
+    console.log(
+      "[ExperimentSelection] topic=%s moment=%s ageBand=%s fallback=%s cards=%s",
+      params.topic || "-",
+      params.moment || params.balance || "-",
+      params.ageBand || "-",
+      "yes",
+      closeMatches
+        .slice(0, 3)
+        .map((card) => `${card.id}:${card.title}`)
+        .join(" | ")
+    );
     return {
       experiments: closeMatches,
       matchStrength: "fallback",
@@ -307,14 +371,40 @@ export function getExperimentSelection(params: ExperimentMatchParams): {
   const topicFallbacks = rankExperimentCards(getTopicFallbackCards(relaxedParams), relaxedParams);
 
   if (topicFallbacks.length > 0) {
+    console.log(
+      "[ExperimentSelection] topic=%s moment=%s ageBand=%s fallback=%s cards=%s",
+      params.topic || "-",
+      params.moment || params.balance || "-",
+      params.ageBand || "-",
+      "yes",
+      topicFallbacks
+        .slice(0, 3)
+        .map((card) => `${card.id}:${card.title}`)
+        .join(" | ")
+    );
     return {
       experiments: topicFallbacks,
       matchStrength: "fallback",
     };
   }
 
+  const universalFallbacks = rankExperimentCards(
+    getUniversalFallbackCards(relaxedParams),
+    relaxedParams
+  );
+  console.log(
+    "[ExperimentSelection] topic=%s moment=%s ageBand=%s fallback=%s cards=%s",
+    params.topic || "-",
+    params.moment || params.balance || "-",
+    params.ageBand || "-",
+    "yes",
+    universalFallbacks
+      .slice(0, 3)
+      .map((card) => `${card.id}:${card.title}`)
+      .join(" | ")
+  );
   return {
-    experiments: rankExperimentCards(getUniversalFallbackCards(relaxedParams), relaxedParams),
+    experiments: universalFallbacks,
     matchStrength: "fallback",
   };
 }

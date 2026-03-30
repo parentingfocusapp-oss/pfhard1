@@ -87,6 +87,9 @@ export default function ReminderScreen() {
     experimentTitle,
     experimentAction,
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
     supports,
     mantra,
     index,
@@ -104,6 +107,9 @@ export default function ReminderScreen() {
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
+    experimentSourceName?: string;
+    experimentSourceUrl?: string;
+    experimentSourceCitation?: string;
     supports?: string;
     mantra?: string;
     index?: string;
@@ -134,6 +140,9 @@ export default function ReminderScreen() {
         experimentTitle: experimentTitle || "",
         experimentAction: experimentAction || "",
         experimentWhy: experimentWhy || "",
+        experimentSourceName: experimentSourceName || "",
+        experimentSourceUrl: experimentSourceUrl || "",
+        experimentSourceCitation: experimentSourceCitation || "",
         supports: supports || "",
         mantra: mantra || "",
         index: index || "",

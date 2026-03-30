@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useMemo, useState } from "react";
-import { Button, ScrollView, Share, Text, View } from "react-native";
+import { Button, Linking, Pressable, ScrollView, Share, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { createSessionReport, createSessionReportText } from "../lib/report";
 import { sessionRepository } from "../lib/storage";
@@ -96,6 +96,23 @@ export default function ReportScreen() {
           <Text style={{ marginBottom: 6, color: WarmTheme.mutedText }}>
             Agreed experiment: {report.agreedExperiment}
           </Text>
+          {report.experimentSourceName ? (
+            <Text style={{ marginBottom: 6, color: WarmTheme.mutedText }}>
+              {report.experimentSourceCitation
+                ? `Based on ${report.experimentSourceCitation}`
+                : `Based on guidance from ${report.experimentSourceName}`}
+            </Text>
+          ) : null}
+          {report.experimentSourceUrl ? (
+            <Pressable
+              onPress={() => {
+                void Linking.openURL(report.experimentSourceUrl!);
+              }}
+              style={{ marginBottom: 6, alignSelf: "flex-start" }}
+            >
+              <Text style={{ color: WarmTheme.accent, fontWeight: "600" }}>See more</Text>
+            </Pressable>
+          ) : null}
           <Text style={{ marginBottom: 10, color: WarmTheme.mutedText }}>
             Follow-up: {report.followUpStatus}
           </Text>

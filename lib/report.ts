@@ -36,17 +36,30 @@ export function createSessionReport(session: StoredSession): SessionReport {
     routeType: session.routeType,
     discussed: getDiscussedSummary(session),
     agreedExperiment: getAgreedExperiment(session),
+    experimentSourceName: session.experimentSourceName,
+    experimentSourceUrl: session.experimentSourceUrl,
+    experimentSourceCitation: session.experimentSourceCitation,
     followUpStatus: session.followUpStatus,
   };
 }
 
 export function createSessionReportText(report: SessionReport): string {
+  const sourceLine = report.experimentSourceName
+    ? `Based on: ${
+        report.experimentSourceCitation ||
+        `guidance from ${report.experimentSourceName}`
+      }`
+    : null;
+
   return [
     `Session: ${report.anonymizedSessionId}`,
     `Date: ${new Date(report.createdAt).toLocaleString()}`,
     `Route: ${report.routeType}`,
     `What was discussed: ${report.discussed}`,
     `Experiment agreed: ${report.agreedExperiment}`,
+    sourceLine,
     `Follow-up status: ${report.followUpStatus}`,
-  ].join("\n");
+  ]
+    .filter(Boolean)
+    .join("\n");
 }

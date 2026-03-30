@@ -52,6 +52,9 @@ type DisplayExperiment = {
   script?: string;
   whyItWorks: string;
   source: "ai" | "library";
+  sourceName?: string;
+  sourceUrl?: string;
+  sourceCitation?: string;
 };
 
 type DetailSectionKey = "how" | "say" | "why";
@@ -672,15 +675,34 @@ export default function ExperimentScreen() {
       script: selectedChoice.primaryScript,
       whyItWorks: selectedChoice.why,
       source: "library",
+      sourceName: selectedChoice.kind === "library" ? selectedChoice.card.source?.name : undefined,
+      sourceUrl: selectedChoice.kind === "library" ? selectedChoice.card.source?.url : undefined,
+      sourceCitation:
+        selectedChoice.kind === "library" ? selectedChoice.card.source?.citation : undefined,
     };
   }, [selectedChoice]);
   const displayExperiment =
     tailoredExperiment || (!isLoadingTailoredExperiment ? fallbackExperiment : null);
+  const displaySource = tailoredExperiment
+    ? "ai"
+    : !isLoadingTailoredExperiment && fallbackExperiment
+    ? "library-fallback"
+    : null;
   const actionContent = useMemo(
     () => splitExperimentAction(displayExperiment?.whatToDo),
     [displayExperiment?.whatToDo]
   );
   const hasHowToDetail = actionContent.detail.length > 0;
+
+  useEffect(() => {
+    if (!displayExperiment || !displaySource) return;
+
+    console.log(
+      "[ExperimentAI] display source=%s title=%s",
+      displaySource,
+      displayExperiment.title
+    );
+  }, [displayExperiment, displaySource]);
 
   useEffect(() => {
     let isActive = true;
@@ -690,17 +712,18 @@ export default function ExperimentScreen() {
       setTailoredExperiment(null);
 
       if (!sourceCards.length) {
-        console.log("[Experiment] Short-route AI skipped: no source cards.");
+        console.log("[ExperimentAI] skipped: no source cards");
         setIsLoadingTailoredExperiment(false);
         return;
       }
 
-      console.log("[Experiment] Short-route AI request", {
-        topic,
-        moment: rawMoment || moment,
-        ageBand,
-        sourceCardIds,
-      });
+      console.log(
+        "[ExperimentAI] request topic=%s moment=%s ageBand=%s sourceCards=%s",
+        topic || "-",
+        rawMoment || moment || "-",
+        ageBand || "-",
+        sourceCardIds.join("|")
+      );
 
       const result = await getTailoredShortExperiment({
         ageBand,
@@ -716,10 +739,11 @@ export default function ExperimentScreen() {
 
       if (!isActive) return;
 
-      console.log("[Experiment] Short-route AI result", {
-        source: result.source,
-        title: result.title,
-      });
+      console.log(
+        "[ExperimentAI] result source=%s title=%s",
+        result.source,
+        result.title
+      );
       setExpandedSections({
         how: false,
         say: false,
@@ -731,6 +755,9 @@ export default function ExperimentScreen() {
         script: result.script,
         whyItWorks: result.whyItWorks,
         source: result.source === "backend" ? "ai" : "library",
+        sourceName: sourceCards[0]?.source?.name,
+        sourceUrl: sourceCards[0]?.source?.url,
+        sourceCitation: sourceCards[0]?.source?.citation,
       });
       setIsLoadingTailoredExperiment(false);
     }
@@ -968,6 +995,9 @@ export default function ExperimentScreen() {
               experimentTitle: displayExperiment.title,
               experimentAction: displayExperiment.whatToDo,
               experimentWhy: displayExperiment.whyItWorks,
+              experimentSourceName: displayExperiment.sourceName || "",
+              experimentSourceUrl: displayExperiment.sourceUrl || "",
+              experimentSourceCitation: displayExperiment.sourceCitation || "",
               index: String(selectedChoiceIndex),
               duration: duration || "",
               tried: JSON.stringify(tried),

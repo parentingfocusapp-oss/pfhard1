@@ -17,6 +17,9 @@ export function createSession(params: {
   experimentTitle?: string;
   experimentAction?: string;
   experimentWhy?: string;
+  experimentSourceName?: string;
+  experimentSourceUrl?: string;
+  experimentSourceCitation?: string;
   reminder?: string;
   supports?: string;
   mantra?: string;
@@ -35,6 +38,9 @@ export function createSession(params: {
     experimentTitle,
     experimentAction,
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
     reminder,
     supports,
     mantra,
@@ -62,6 +68,9 @@ export function createSession(params: {
     experimentTitle: experimentTitle || "Your experiment",
     experimentAction: experimentAction || "No experiment selected.",
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
 
     support: supports,
     mantra,

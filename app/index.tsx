@@ -1,6 +1,6 @@
 import { router } from "expo-router";
 import { useEffect, useState } from "react";
-import { Button, Pressable, Text, View } from "react-native";
+import { Button, Linking, Pressable, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import { sessionRepository } from "../lib/storage";
 import { AgeBand } from "../types/experiment";
@@ -80,6 +80,25 @@ export default function IndexScreen() {
           <Text style={{ marginBottom: 16, color: WarmTheme.mutedText }}>
             {latestSession.experimentAction}
           </Text>
+
+          {latestSession.experimentSourceName ? (
+            <Text style={{ marginBottom: 6, color: WarmTheme.mutedText, fontSize: 13 }}>
+              {latestSession.experimentSourceCitation
+                ? `Based on ${latestSession.experimentSourceCitation}`
+                : `Based on guidance from ${latestSession.experimentSourceName}`}
+            </Text>
+          ) : null}
+
+          {latestSession.experimentSourceUrl ? (
+            <Pressable
+              onPress={() => {
+                void Linking.openURL(latestSession.experimentSourceUrl!);
+              }}
+              style={{ marginBottom: 12, alignSelf: "flex-start" }}
+            >
+              <Text style={{ color: WarmTheme.accent, fontWeight: "600" }}>See more</Text>
+            </Pressable>
+          ) : null}
 
           <Button
             title="Follow up"

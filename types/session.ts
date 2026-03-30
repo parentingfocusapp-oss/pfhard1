@@ -28,6 +28,9 @@ export type StoredSession = {
   experimentTitle: string;
   experimentAction: string;
   experimentWhy?: string;
+  experimentSourceName?: string;
+  experimentSourceUrl?: string;
+  experimentSourceCitation?: string;
 
   // Will / support
   support?: string;

@@ -37,6 +37,12 @@ export type ExperimentCard = {
   warmthLevel?: IntensityLevel;
   structureLevel?: IntensityLevel;
   tags?: string[];
+  source?: {
+    type?: string;
+    name: string;
+    citation?: string;
+    url?: string;
+  };
 };
 
 export type ExperimentAIPayload = {

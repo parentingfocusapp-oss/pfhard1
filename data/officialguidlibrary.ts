@@ -1,0 +1,242 @@
+import { OfficialGuidanceItem } from "../types/officialguidance";
+
+export const officialGuidLibrary: OfficialGuidanceItem[] = [
+  {
+    id: "official-bedtime-lights-out-calm-exit",
+    topic: "Bedtime",
+    problem: "Arguments and repeated engagement at lights out",
+    moments: ["Arguments at lights out"],
+    triedPatterns: ["repeated reminders", "extra explaining"],
+    hopedFor: ["less arguing", "calmer bedtime"],
+    title: "Keep lights-out brief and predictable",
+    action:
+      "At lights out, use one short goodnight routine, answer one final practical question, then step back without reopening the discussion.",
+    why:
+      "A predictable ending reduces the chance that bedtime turns into a long negotiation.",
+    scripts: [
+      {
+        id: "official-bedtime-lights-out-calm-exit-script",
+        label: "Default",
+        text: "We have finished bedtime. I will check on you in a bit, but I am not starting the routine again.",
+        ageBands: ["6-8", "9-12", "13-16"],
+        capacity: ["low", "medium"],
+      },
+    ],
+    ageBands: ["6-8", "9-12", "13-16"],
+    parentCapacity: ["low", "medium"],
+    goals: ["less arguing", "hold the boundary calmly"],
+    tags: ["bedtime", "follow-through", "routine"],
+    structureLevel: "high",
+    source: {
+      type: "official-guidance",
+      name: "NHS",
+      citation: "NHS sleep routine guidance",
+      url: "https://www.nhs.uk/conditions/baby/health/sleep-and-young-children/",
+    },
+  },
+  {
+    id: "official-screen-night-phone-outside-room",
+    topic: "Screen time",
+    problem: "Phone use late at night keeps restarting the boundary",
+    moments: ["Wanting screens at the wrong time"],
+    triedPatterns: ["taking device away", "arguing at bedtime"],
+    hopedFor: ["calmer transition", "more follow-through"],
+    title: "Move the phone decision earlier",
+    action:
+      "Set the phone-charging place before bedtime and make the handoff part of the routine, so the boundary happens earlier and with less friction in the moment.",
+    why:
+      "Changing the environment can reduce late-night conflict better than repeating the same limit at the point of tension.",
+    scripts: [
+      {
+        id: "official-screen-night-phone-outside-room-script",
+        label: "Older child",
+        text: "Let us sort the phone now, before bedtime gets tense. It charges here overnight and you get it back in the morning.",
+        ageBands: ["11-16", "13-16"],
+        capacity: ["medium", "high"],
+      },
+    ],
+    ageBands: ["11-16", "13-16"],
+    parentCapacity: ["medium", "high"],
+    goals: ["hold the boundary calmly", "less escalation"],
+    tags: ["screen time", "environment", "boundary", "night routine"],
+    structureLevel: "high",
+    source: {
+      type: "official-guidance",
+      name: "NHS CAMHS",
+      citation: "CAMHS screen and sleep guidance",
+      url: "https://oxfordhealth.nhs.uk/camhs/self-care/sleep/difficulties/screens/",
+    },
+  },
+  {
+    id: "official-morning-dressed-prepare-night-before",
+    topic: "Morning routine",
+    problem: "Morning demands pile up and the same sticking point repeats",
+    moments: ["Getting dressed"],
+    triedPatterns: ["repeating reminders"],
+    hopedFor: ["faster response", "less back-and-forth"],
+    title: "Reduce morning decisions ahead of time",
+    action:
+      "Prepare the clothing choice the night before and start the morning with one clear first step rather than multiple reminders.",
+    why:
+      "Reducing decision load early can make the routine easier to start and easier to follow through on.",
+    scripts: [
+      {
+        id: "official-morning-dressed-prepare-night-before-script",
+        label: "Default",
+        text: "Your clothes are ready. Start with that first step and then we will keep moving.",
+        ageBands: ["4-5", "6-8", "9-12"],
+        capacity: ["low", "medium"],
+      },
+    ],
+    ageBands: ["4-5", "6-8", "9-12"],
+    parentCapacity: ["low", "medium"],
+    goals: ["make transitions easier", "less back-and-forth"],
+    tags: ["morning routine", "environment", "small-step"],
+    structureLevel: "high",
+    source: {
+      type: "official-guidance",
+      name: "NHS",
+      citation: "NHS routine preparation guidance",
+      url: "https://www.gatesheadhealth.nhs.uk/resources/sleep/",
+    },
+  },
+  {
+    id: "official-homework-mistakes-co-regulate-first",
+    topic: "Homework",
+    problem: "Mistakes trigger overwhelm and escalation",
+    moments: ["Meltdown over mistakes"],
+    triedPatterns: ["explaining", "staying calm"],
+    hopedFor: ["less shouting", "more regulation"],
+    title: "Regulate first, then return to the task",
+    action:
+      "When your child starts to spiral over mistakes, pause the correction, help them settle their body first, and come back to one small part of the task once they are steadier.",
+    why:
+      "Co-regulation often works better than more instruction when a child is already overwhelmed.",
+    scripts: [
+      {
+        id: "official-homework-mistakes-co-regulate-first-script",
+        label: "Default",
+        text: "We are pausing for a minute. First get steady, then we will come back to one small part.",
+        ageBands: ["6-8", "9-12", "11-16", "13-16"],
+        capacity: ["low", "medium"],
+      },
+    ],
+    ageBands: ["6-8", "9-12", "11-16", "13-16"],
+    parentCapacity: ["low", "medium"],
+    goals: ["stay calm", "reduce escalation"],
+    tags: ["co-regulation", "emotion", "homework", "pause"],
+    warmthLevel: "high",
+    source: {
+      type: "official-guidance",
+      name: "NSPCC",
+      citation: "NSPCC calm parenting guidance",
+      url: "https://www.nspcc.org.uk/advice-for-families/take-5-seconds/",
+    },
+  },
+  {
+    id: "official-screen-stop-follow-through",
+    topic: "Screen time",
+    problem: "The limit keeps turning into repeated reminders and pushback",
+    moments: ["Stopping the device"],
+    triedPatterns: ["repeating reminders", "taking device away"],
+    hopedFor: ["listen first time", "less arguing"],
+    title: "Use one clear stopping routine",
+    action:
+      "Pick one stopping routine you can repeat each time: brief warning, clear end point, then calm follow-through without adding extra debate.",
+    why:
+      "A repeated routine makes the limit more predictable and less dependent on long discussions in the moment.",
+    scripts: [
+      {
+        id: "official-screen-stop-follow-through-script",
+        label: "Older child",
+        text: "Your time is up. I am not debating it now. Finish this step and hand it over.",
+        ageBands: ["11-16", "13-16"],
+        capacity: ["medium", "high"],
+      },
+      {
+        id: "official-screen-stop-follow-through-script-default",
+        label: "Default",
+        text: "Screen time is finished. We are moving to the next step now.",
+        ageBands: ["6-8", "9-12"],
+        capacity: ["low", "medium"],
+      },
+    ],
+    ageBands: ["6-8", "9-12", "11-16", "13-16"],
+    parentCapacity: ["low", "medium", "high"],
+    goals: ["listen first time", "less arguing"],
+    tags: ["screen time", "boundary", "follow-through", "warning"],
+    structureLevel: "high",
+    source: {
+      type: "official-guidance",
+      name: "Sheffield Children's NHS",
+      citation: "Managing screen time guidance",
+      url: "https://library.sheffieldchildrens.nhs.uk/managing-screen-time-community-paediatrics-advice/",
+    },
+  },
+  {
+    id: "official-bedtime-refusing-upstairs-connection-plus-limit",
+    topic: "Bedtime",
+    problem: "Refusal escalates when the parent pushes harder",
+    moments: ["Refusing to go upstairs"],
+    triedPatterns: ["shouting", "repeated reminders"],
+    hopedFor: ["more cooperation", "less escalation"],
+    title: "Acknowledge once, then move the routine",
+    action:
+      "Acknowledge the protest briefly, then return to one clear next step in the routine without switching into a long argument.",
+    why:
+      "Brief connection can lower the temperature, but the routine still needs a clear direction so bedtime keeps moving.",
+    scripts: [
+      {
+        id: "official-bedtime-refusing-upstairs-connection-plus-limit-script",
+        label: "Default",
+        text: "I know you do not want to go up yet. The next step is upstairs now, and I will help you start.",
+        ageBands: ["6-8", "9-12", "11-16"],
+        capacity: ["medium"],
+      },
+    ],
+    ageBands: ["6-8", "9-12", "11-16"],
+    parentCapacity: ["medium"],
+    goals: ["less escalation", "make transitions easier"],
+    tags: ["bedtime", "connection", "boundary", "transition"],
+    warmthLevel: "medium",
+    structureLevel: "medium",
+    source: {
+      type: "official-guidance",
+      name: "NSPCC",
+      citation: "NSPCC anger and conflict guidance",
+      url: "https://www.nspcc.org.uk/keeping-children-safe/support-for-parents/arguments-conflict-family-tension/",
+    },
+  },
+  {
+    id: "official-homework-refusing-start-calm-coaching",
+    topic: "Homework",
+    problem: "Starting feels too big and turns into a standoff",
+    moments: ["Refusing to start"],
+    triedPatterns: ["explaining", "consequences"],
+    hopedFor: ["more independence", "quicker cooperation"],
+    title: "Coach the start, not the whole task",
+    action:
+      "Shrink the starting point to one clearly defined piece, stay nearby briefly, then step back once momentum begins.",
+    why:
+      "A smaller start can reduce overwhelm while still building independent follow-through.",
+    scripts: [
+      {
+        id: "official-homework-refusing-start-calm-coaching-script",
+        label: "Older child",
+        text: "Start with this one piece first. I will stay nearby for a minute, then you take it from there.",
+        ageBands: ["9-12", "11-16", "13-16"],
+        capacity: ["medium"],
+      },
+    ],
+    ageBands: ["9-12", "11-16", "13-16"],
+    parentCapacity: ["medium"],
+    goals: ["more independence", "make the next moment easier"],
+    tags: ["homework", "coaching", "small-start", "independence"],
+    source: {
+      type: "official-guidance",
+      name: "NICE",
+      citation: "NICE parent training guidance",
+      url: "https://www.nice.org.uk/guidance/qs59/chapter/Quality-statement-4-Parent-or-carer-training",
+    },
+  },
+];

@@ -20,6 +20,9 @@ export default function ClosingScreen() {
     experimentTitle,
     experimentAction,
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
     reminder,
     supports,
     mantra,
@@ -37,6 +40,9 @@ export default function ClosingScreen() {
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
+    experimentSourceName?: string;
+    experimentSourceUrl?: string;
+    experimentSourceCitation?: string;
     reminder?: string;
     supports?: string;
     mantra?: string;
@@ -58,6 +64,9 @@ export default function ClosingScreen() {
     experimentTitle,
     experimentAction,
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
     reminder,
     supports,
     mantra,

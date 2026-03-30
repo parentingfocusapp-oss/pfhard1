@@ -32,6 +32,9 @@ export default function WillScreen() {
     experimentTitle,
     experimentAction,
     experimentWhy,
+    experimentSourceName,
+    experimentSourceUrl,
+    experimentSourceCitation,
     index,
     duration,
   } = useLocalSearchParams<{
@@ -47,6 +50,9 @@ export default function WillScreen() {
     experimentTitle?: string;
     experimentAction?: string;
     experimentWhy?: string;
+    experimentSourceName?: string;
+    experimentSourceUrl?: string;
+    experimentSourceCitation?: string;
     index?: string;
     duration?: string;
   }>();
@@ -106,6 +112,9 @@ export default function WillScreen() {
         experimentTitle: experimentTitle || "",
         experimentAction: experimentAction || "",
         experimentWhy: experimentWhy || "",
+        experimentSourceName: experimentSourceName || "",
+        experimentSourceUrl: experimentSourceUrl || "",
+        experimentSourceCitation: experimentSourceCitation || "",
         index: index || "",
         supports: selectedSupports.join(" • "),
         mantra: selectedMantra,
