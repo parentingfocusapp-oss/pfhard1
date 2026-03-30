@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from "expo-router";
-import { useEffect, useMemo, useState } from "react";
-import { Button, ScrollView, Text, View } from "react-native";
+import { ReactNode, useEffect, useMemo, useState } from "react";
+import { Button, Pressable, ScrollView, Text, View } from "react-native";
 import { WarmTheme } from "../constants/warmTheme";
 import {
   getAppliedExperimentExample,
@@ -53,6 +53,8 @@ type DisplayExperiment = {
   whyItWorks: string;
   source: "ai" | "library";
 };
+
+type DetailSectionKey = "how" | "say" | "why";
 
 function formatCapacityLabel(level?: CapacityLevel) {
   if (!level) return undefined;
@@ -291,6 +293,93 @@ function buildDiverseSourceCards(cards: ExperimentCard[], limit = 3) {
   return selected;
 }
 
+function splitExperimentAction(text?: string) {
+  const value = text?.trim() || "";
+
+  if (!value) {
+    return { summary: "", detail: "" };
+  }
+
+  const sentenceMatch = value.match(/^.*?[.!?](?:\s|$)/);
+
+  if (!sentenceMatch) {
+    return { summary: value, detail: "" };
+  }
+
+  const summary = sentenceMatch[0].trim();
+  const detail = value.slice(summary.length).trim();
+
+  return {
+    summary,
+    detail,
+  };
+}
+
+function DetailSection(props: {
+  title: string;
+  expanded: boolean;
+  onPress: () => void;
+  children: ReactNode;
+}) {
+  const { title, expanded, onPress, children } = props;
+
+  return (
+    <View
+      style={{
+        borderWidth: 1,
+        borderColor: WarmTheme.border,
+        borderRadius: 12,
+        marginTop: 12,
+        backgroundColor: WarmTheme.surface,
+        overflow: "hidden",
+      }}
+    >
+      <Pressable
+        onPress={onPress}
+        style={{
+          paddingHorizontal: 14,
+          paddingVertical: 14,
+          flexDirection: "row",
+          alignItems: "center",
+          justifyContent: "space-between",
+        }}
+      >
+        <Text
+          style={{
+            color: WarmTheme.text,
+            fontSize: 14,
+            fontWeight: "700",
+          }}
+        >
+          {title}
+        </Text>
+        <Text
+          style={{
+            color: WarmTheme.accent,
+            fontSize: 18,
+            fontWeight: "600",
+          }}
+        >
+          {expanded ? "−" : "+"}
+        </Text>
+      </Pressable>
+
+      {expanded ? (
+        <View
+          style={{
+            borderTopWidth: 1,
+            borderTopColor: WarmTheme.border,
+            paddingHorizontal: 14,
+            paddingVertical: 14,
+          }}
+        >
+          {children}
+        </View>
+      ) : null}
+    </View>
+  );
+}
+
 export default function ExperimentScreen() {
   const params = useLocalSearchParams<{
     topic?: string;
@@ -390,6 +479,11 @@ export default function ExperimentScreen() {
   const [tailoredExperiment, setTailoredExperiment] = useState<DisplayExperiment | null>(
     null
   );
+  const [expandedSections, setExpandedSections] = useState<Record<DetailSectionKey, boolean>>({
+    how: false,
+    say: false,
+    why: false,
+  });
 
   useEffect(() => {
     async function loadPreviousSession() {
@@ -567,10 +661,6 @@ export default function ExperimentScreen() {
       : experimentId
       ? "Experiment"
       : "Choose one experiment";
-  const introText =
-    tailoredExperiment?.source === "library" || matchStrength === "fallback"
-      ? "Here's a simple place to start."
-      : "Here's one small thing to try.";
   const fallbackExperiment = useMemo<DisplayExperiment | null>(() => {
     if (!selectedChoice) {
       return null;
@@ -586,6 +676,11 @@ export default function ExperimentScreen() {
   }, [selectedChoice]);
   const displayExperiment =
     tailoredExperiment || (!isLoadingTailoredExperiment ? fallbackExperiment : null);
+  const actionContent = useMemo(
+    () => splitExperimentAction(displayExperiment?.whatToDo),
+    [displayExperiment?.whatToDo]
+  );
+  const hasHowToDetail = actionContent.detail.length > 0;
 
   useEffect(() => {
     let isActive = true;
@@ -624,6 +719,11 @@ export default function ExperimentScreen() {
       console.log("[Experiment] Short-route AI result", {
         source: result.source,
         title: result.title,
+      });
+      setExpandedSections({
+        how: false,
+        say: false,
+        why: false,
       });
       setTailoredExperiment({
         title: result.title,
@@ -698,9 +798,9 @@ export default function ExperimentScreen() {
             borderRadius: 16,
             padding: 18,
             marginBottom: 20,
-            backgroundColor: WarmTheme.surfaceAlt,
-          }}
-        >
+        backgroundColor: WarmTheme.surfaceAlt,
+      }}
+    >
           <Text
             style={{
               fontSize: 22,
@@ -745,69 +845,61 @@ export default function ExperimentScreen() {
               fontSize: 22,
               fontWeight: "700",
               lineHeight: 30,
-              marginBottom: 12,
+              marginBottom: 10,
               color: WarmTheme.text,
             }}
           >
             {displayExperiment.title}
           </Text>
 
-          <Text style={{ marginBottom: 8, color: WarmTheme.mutedText }}>{introText}</Text>
-
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: "700",
-              marginBottom: 6,
-              color: WarmTheme.accent,
-            }}
-          >
-            What to do
+          <Text style={{ marginBottom: 6, color: WarmTheme.text }}>
+            {actionContent.summary}
           </Text>
 
-          <Text style={{ marginBottom: 12, color: WarmTheme.text }}>
-            {displayExperiment.whatToDo}
-          </Text>
-
-          {displayExperiment.script ? (
-            <View
-              style={{
-                borderWidth: 1,
-                borderColor: WarmTheme.border,
-                borderRadius: 10,
-                padding: 12,
-                marginBottom: 12,
-                backgroundColor: WarmTheme.surface,
-              }}
+          {hasHowToDetail ? (
+            <DetailSection
+              title="How to do it"
+              expanded={expandedSections.how}
+              onPress={() =>
+                setExpandedSections((current) => ({
+                  ...current,
+                  how: !current.how,
+                }))
+              }
             >
-              <Text
-                style={{
-                  marginBottom: 8,
-                  color: WarmTheme.accent,
-                  fontSize: 12,
-                  fontWeight: "700",
-                }}
-              >
-                What to say
-              </Text>
-              <Text style={{ color: WarmTheme.text }}>{displayExperiment.script}</Text>
-            </View>
+              <Text style={{ color: WarmTheme.text }}>{actionContent.detail}</Text>
+            </DetailSection>
           ) : null}
 
-          <Text
-            style={{
-              fontSize: 12,
-              fontWeight: "700",
-              marginBottom: 6,
-              color: WarmTheme.accent,
-            }}
-          >
-            Why it may help
-          </Text>
+          {displayExperiment.script ? (
+            <DetailSection
+              title="What to say"
+              expanded={expandedSections.say}
+              onPress={() =>
+                setExpandedSections((current) => ({
+                  ...current,
+                  say: !current.say,
+                }))
+              }
+            >
+              <Text style={{ color: WarmTheme.text }}>{displayExperiment.script}</Text>
+            </DetailSection>
+          ) : null}
 
-          <Text style={{ color: WarmTheme.mutedText }}>
-            {displayExperiment.whyItWorks}
-          </Text>
+          <DetailSection
+            title="Why this may help"
+            expanded={expandedSections.why}
+            onPress={() =>
+              setExpandedSections((current) => ({
+                ...current,
+                why: !current.why,
+              }))
+            }
+          >
+            <Text style={{ color: WarmTheme.mutedText }}>
+              {displayExperiment.whyItWorks}
+            </Text>
+          </DetailSection>
 
           {appliedExample ? (
             <View
